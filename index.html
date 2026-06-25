@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="theme-color" content="#4A7C2A"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Buen Fruto"/>
+  <title>Buen Fruto</title>
+  <link rel="manifest" href="manifest.json"/>
+  <style>
+    :root {
+      --verde:       #4A7C2A;
+      --verde-dark:  #335C1C;
+      --verde-light: #EAF3DE;
+      --verde-mid:   #C5DDA8;
+      --morado:      #6B3FA0;
+      --morado-light:#F0EAF9;
+      --texto:       #1A1A1A;
+      --texto-2:     #555;
+      --texto-3:     #999;
+      --borde:       #E2E8DC;
+      --fondo:       #F8FBF5;
+      --blanco:      #FFFFFF;
+      --rojo:        #D93025;
+      --rojo-light:  #FDECEA;
+      --radio:       14px;
+      --radio-sm:    8px;
+      --sombra:      0 2px 12px rgba(74,124,42,0.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--fondo); color: var(--texto); }
+
+    /* ── VISTAS ── */
+    .vista { display: none; min-height: 100vh; }
+    .vista.activa { display: flex; flex-direction: column; }
+
+    /* ── LOGIN ── */
+    #v-login {
+      background: var(--verde);
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.5rem;
+    }
+    .login-card {
+      background: var(--blanco);
+      border-radius: 24px;
+      padding: 2rem 1.75rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 8px 32px rgba(74,124,42,0.14);
+    }
+    .logo-wrap { text-align: center; margin-bottom: 1.5rem; }
+    .logo-wrap img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+    .logo-wrap h1 { font-size: 1.4rem; font-weight: 700; color: var(--verde); margin-top: .5rem; letter-spacing: -.5px; }
+    .logo-wrap p { font-size: .85rem; color: var(--texto-3); margin-top: 2px; }
+    .campo { margin-bottom: 1rem; }
+    .campo label { display: block; font-size: .8rem; font-weight: 500; color: var(--texto-2); margin-bottom: .4rem; }
+    .campo input {
+      width: 100%; padding: .75rem 1rem;
+      border: 1.5px solid var(--borde); border-radius: var(--radio-sm);
+      font-size: .95rem; color: var(--texto);
+      outline: none; transition: border-color .2s;
+      background: var(--fondo);
+    }
+    .campo input:focus { border-color: var(--verde); background: var(--blanco); }
+    .btn-primary {
+      width: 100%; padding: .85rem;
+      background: var(--verde); color: var(--blanco);
+      border: none; border-radius: var(--radio-sm);
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background .15s, transform .1s;
+      margin-top: .5rem;
+    }
+    .btn-primary:active { background: var(--verde-dark); transform: scale(.98); }
+    .error-msg { background: var(--rojo-light); color: var(--rojo); border-radius: var(--radio-sm); padding: .65rem 1rem; font-size: .85rem; margin-top: .75rem; display: none; }
+
+    /* ── LAYOUT PRINCIPAL ── */
+    .topbar {
+      background: var(--blanco);
+      border-bottom: 1px solid var(--borde);
+      padding: .9rem 1.25rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-logo { display: flex; align-items: center; gap: .5rem; }
+    .topbar-logo img { width: 32px; height: 32px; border-radius: 50%; }
+    .topbar-logo span { font-weight: 700; font-size: 1rem; color: var(--verde); }
+    .topbar-user { font-size: .8rem; color: var(--texto-3); text-align: right; }
+    .topbar-user strong { display: block; color: var(--texto); font-size: .9rem; }
+    .contenido { flex: 1; overflow-y: auto; padding: 1.25rem; padding-bottom: 6rem; }
+    .navbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--blanco);
+      border-top: 1px solid var(--borde);
+      display: flex;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 3px; padding: .65rem .5rem;
+      border: none; background: none; cursor: pointer;
+      font-size: .68rem; color: var(--texto-3);
+      transition: color .15s;
+    }
+    .nav-btn.activo { color: var(--verde); }
+    .nav-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── SECCIÓN: HOME ── */
+    .saludo { margin-bottom: 1.25rem; }
+    .saludo h2 { font-size: 1.25rem; font-weight: 700; color: var(--texto); }
+    .saludo p { font-size: .875rem; color: var(--texto-2); margin-top: 2px; }
+    .card {
+      background: var(--blanco); border-radius: var(--radio);
+      border: 1px solid var(--borde); padding: 1.1rem 1.25rem;
+      margin-bottom: 1rem; box-shadow: var(--sombra);
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .75rem; }
+    .card-title { font-size: .75rem; font-weight: 600; color: var(--texto-3); text-transform: uppercase; letter-spacing: .06em; }
+    .pill {
+      display: inline-block; font-size: .72rem; font-weight: 600;
+      padding: .2rem .65rem; border-radius: 20px;
+    }
+    .pill-morado { background: var(--verde-light); color: var(--verde); }
+    .pill-oliva  { background: var(--verde-light);  color: var(--verde); }
+    .pill-gris   { background: #F0F0F0; color: var(--texto-3); }
+    .menu-dia-nombre { font-size: 1.1rem; font-weight: 700; color: var(--texto); margin-bottom: .3rem; }
+    .menu-dia-precio { font-size: .875rem; color: var(--texto-2); }
+    .precio-desglose { margin-top: .5rem; }
+    .precio-fila { display: flex; justify-content: space-between; font-size: .8rem; padding: .2rem 0; }
+    .precio-fila .label { color: var(--texto-3); }
+    .precio-fila .valor { font-weight: 500; }
+    .precio-fila .valor.morado { color: var(--verde); }
+    .precio-fila .valor.oliva  { color: var(--verde); }
+    .divider { border: none; border-top: 1px solid var(--borde); margin: .5rem 0; }
+    .precio-fila.total .label { font-weight: 600; color: var(--texto); }
+    .precio-fila.total .valor { font-weight: 700; color: var(--texto); }
+    .btn-pedir {
+      width: 100%; padding: .85rem;
+      background: var(--verde); color: var(--blanco);
+      border: none; border-radius: var(--radio-sm);
+      font-size: .95rem; font-weight: 600;
+      cursor: pointer; margin-top: 1rem;
+      transition: background .15s, transform .1s;
+    }
+    .btn-pedir:active { background: var(--verde-dark); transform: scale(.98); }
+    .btn-pedir:disabled { background: var(--borde); color: var(--texto-3); cursor: not-allowed; }
+    .btn-secundario {
+      width: 100%; padding: .75rem;
+      background: transparent; color: var(--verde);
+      border: 1.5px solid var(--verde); border-radius: var(--radio-sm);
+      font-size: .9rem; font-weight: 600;
+      cursor: pointer; margin-top: .5rem;
+      transition: background .15s;
+    }
+    .btn-secundario:active { background: var(--verde-light); }
+    .extras-titulo { font-size: .8rem; font-weight: 600; color: var(--texto-2); margin: .75rem 0 .4rem; }
+    .extra-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .6rem .75rem; border-radius: var(--radio-sm);
+      border: 1.5px solid var(--borde); margin-bottom: .4rem;
+      cursor: pointer; transition: border-color .15s, background .15s;
+    }
+    .extra-item.seleccionado { border-color: var(--verde); background: var(--verde-light); }
+    .extra-nombre { font-size: .875rem; color: var(--texto); }
+    .extra-precio { font-size: .875rem; font-weight: 600; color: var(--verde); }
+    .check-icon { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--borde); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .extra-item.seleccionado .check-icon { background: var(--morado); border-color: var(--verde); }
+    .check-icon svg { width: 10px; height: 10px; stroke: white; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; display: none; }
+    .extra-item.seleccionado .check-icon svg { display: block; }
+
+    /* ── BARCODE ── */
+    .barcode-wrap { text-align: center; padding: 1.5rem 0; }
+    .barcode-svg { width: 100%; max-width: 280px; height: 80px; margin: 0 auto; display: block; }
+    .barcode-num { font-family: 'Courier New', monospace; font-size: .75rem; color: var(--texto-3); margin-top: .4rem; letter-spacing: .1em; }
+    .barcode-estado { font-size: .8rem; font-weight: 600; margin-top: .5rem; }
+    .barcode-estado.pagado { color: var(--verde); }
+    .barcode-estado.usado  { color: var(--texto-3); }
+
+    /* ── MENÚ SEMANAL ── */
+    .dia-tab-wrap { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .25rem; margin-bottom: 1rem; scrollbar-width: none; }
+    .dia-tab-wrap::-webkit-scrollbar { display: none; }
+    .dia-tab {
+      flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      padding: .5rem .75rem; border-radius: var(--radio-sm);
+      border: 1.5px solid var(--borde); cursor: pointer;
+      background: var(--blanco); transition: all .15s;
+      min-width: 52px;
+    }
+    .dia-tab.activo { border-color: var(--verde); background: var(--verde-light); }
+    .dia-tab .dia-letra { font-size: .7rem; color: var(--texto-3); text-transform: uppercase; }
+    .dia-tab .dia-num { font-size: 1rem; font-weight: 700; color: var(--texto); margin-top: 1px; }
+    .dia-tab.activo .dia-letra, .dia-tab.activo .dia-num { color: var(--verde); }
+
+    /* ── HISTORIAL ── */
+    .historial-item { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; border-bottom: 1px solid var(--borde); }
+    .historial-item:last-child { border-bottom: none; }
+    .hist-fecha { font-size: .8rem; color: var(--texto-3); }
+    .hist-nombre { font-size: .9rem; font-weight: 500; color: var(--texto); }
+    .hist-monto { font-size: .9rem; font-weight: 700; color: var(--verde); }
+
+    /* ── PERFIL ── */
+    .perfil-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: var(--verde-light); color: var(--verde);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; font-weight: 700; margin: 0 auto 1rem;
+    }
+    .perfil-nombre { text-align: center; font-size: 1.1rem; font-weight: 700; }
+    .perfil-email  { text-align: center; font-size: .85rem; color: var(--texto-3); margin-top: 2px; }
+    .perfil-fila { display: flex; justify-content: space-between; align-items: center; padding: .9rem 0; border-bottom: 1px solid var(--borde); font-size: .9rem; }
+    .perfil-fila:last-child { border-bottom: none; }
+    .perfil-fila .lbl { color: var(--texto-3); }
+    .btn-salir {
+      width: 100%; padding: .85rem;
+      background: var(--rojo-light); color: var(--rojo);
+      border: none; border-radius: var(--radio-sm);
+      font-size: .95rem; font-weight: 600;
+      cursor: pointer; margin-top: 1.5rem;
+    }
+
+    /* ── VENTANA CERRADA ── */
+    .ventana-cerrada {
+      background: var(--verde-light); border: 1.5px solid var(--verde);
+      border-radius: var(--radio-sm); padding: .75rem 1rem;
+      font-size: .85rem; color: var(--verde); margin-bottom: 1rem;
+      text-align: center; font-weight: 500;
+    }
+
+    /* ── LOADER ── */
+    .loader-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--verde-light); border-top-color: var(--morado); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- ══════ LOADER ══════ -->
+<div id="v-loader" class="vista activa">
+  <div class="loader-wrap"><div class="spinner"></div></div>
+</div>
+
+<!-- ══════ LOGIN ══════ -->
+<div id="v-login" class="vista">
+  <div class="login-card">
+    <div class="logo-wrap">
+      <div style="width:72px;height:72px;border-radius:50%;background:var(--verde-light);display:flex;align-items:center;justify-content:center;margin:0 auto;">
+        <svg viewBox="0 0 40 40" width="44" height="44" fill="none">
+          <ellipse cx="17" cy="26" rx="6" ry="8" fill="#335C1C"/>
+          <ellipse cx="26" cy="27" rx="5" ry="7" fill="#4A7C2A"/>
+          <path d="M17 18 Q18 8 24 6 Q22 14 26 20" stroke="#3a2a1a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M20 12 Q26 7 30 10" stroke="#5C7A2A" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+          <path d="M19 15 Q13 10 10 13" stroke="#5C7A2A" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Buen Fruto</h1>
+      <p>La pausa que te mereces, cada día</p>
+    </div>
+    <div class="campo">
+      <label>Correo electrónico</label>
+      <input type="email" id="inp-email" placeholder="tucorreo@empresa.com" autocomplete="email"/>
+    </div>
+    <div class="campo">
+      <label>Contraseña</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" id="btn-login">Entrar</button>
+    <div class="error-msg" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ══════ APP EMPLEADO ══════ -->
+<div id="v-empleado" class="vista">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--verde-light);display:flex;align-items:center;justify-content:center;">
+        <svg viewBox="0 0 40 40" width="20" height="20" fill="none">
+          <ellipse cx="17" cy="26" rx="6" ry="8" fill="#335C1C"/>
+          <ellipse cx="26" cy="27" rx="5" ry="7" fill="#4A7C2A"/>
+          <path d="M17 18 Q18 8 24 6 Q22 14 26 20" stroke="#3a2a1a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span>Buen Fruto</span>
+    </div>
+    <div class="topbar-user">
+      <strong id="topbar-nombre">—</strong>
+      Empleado
+    </div>
+  </div>
+
+  <div class="contenido" id="contenido-empleado">
+
+    <!-- TAB: INICIO -->
+    <div id="tab-inicio">
+      <div class="saludo">
+        <h2 id="saludo-nombre">Hola 👋</h2>
+        <p id="saludo-fecha">Hoy es —</p>
+      </div>
+
+      <div id="ventana-aviso" class="ventana-cerrada" style="display:none">
+        El comedor abre de 2:00 pm a 4:30 pm
+      </div>
+
+      <!-- Menú de hoy -->
+      <div class="card" id="card-menu-hoy">
+        <div class="card-header">
+          <span class="card-title">Menú de hoy</span>
+          <span class="pill pill-oliva" id="pill-estado-hoy">Disponible</span>
+        </div>
+        <div class="menu-dia-nombre" id="menu-hoy-nombre">Cargando...</div>
+        <div class="precio-desglose">
+          <div class="precio-fila">
+            <span class="label">Empresa paga</span>
+            <span class="valor oliva">$45.00</span>
+          </div>
+          <div class="precio-fila">
+            <span class="label">Tú pagas</span>
+            <span class="valor verde" id="precio-empleado-hoy">$45.00</span>
+          </div>
+          <hr class="divider"/>
+          <div class="precio-fila total">
+            <span class="label">Total comida</span>
+            <span class="valor" id="precio-total-hoy">$90.00</span>
+          </div>
+        </div>
+
+        <div class="extras-titulo">Extras opcionales</div>
+        <div id="extras-lista-hoy"></div>
+
+        <button class="btn-pedir" id="btn-pedir-momento" onclick="pedirAhora()">Pedir ahora</button>
+        <button class="btn-secundario" onclick="mostrarTab('tab-menu')">Ver menú de la semana</button>
+      </div>
+
+      <!-- Mi barcode activo -->
+      <div class="card" id="card-barcode" style="display:none">
+        <div class="card-header">
+          <span class="card-title">Mi comprobante de hoy</span>
+          <span class="pill pill-morado">Listo para escanear</span>
+        </div>
+        <div class="barcode-wrap">
+          <svg class="barcode-svg" id="barcode-svg" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="barcode-num" id="barcode-num"></div>
+          <div class="barcode-estado pagado">✓ Pago confirmado — preséntalo en el comedor</div>
+        </div>
+        <button class="btn-secundario" style="color:var(--rojo);border-color:var(--rojo)" onclick="cancelarOrden()">Cancelar orden</button>
+      </div>
+    </div>
+
+    <!-- TAB: MENÚ SEMANAL -->
+    <div id="tab-menu" style="display:none">
+      <div class="saludo"><h2>Menú de la semana</h2><p>Hoy + próximos 5 días</p></div>
+      <div class="dia-tab-wrap" id="dias-tabs"></div>
+      <div class="card" id="card-dia-detalle">
+        <div class="card-header">
+          <span class="card-title" id="dia-detalle-fecha">—</span>
+          <span class="pill pill-morado" id="dia-detalle-pill">Disponible</span>
+        </div>
+        <div class="menu-dia-nombre" id="dia-detalle-nombre">—</div>
+        <div class="precio-desglose">
+          <div class="precio-fila"><span class="label">Empresa paga</span><span class="valor oliva">$45.00</span></div>
+          <div class="precio-fila"><span class="label">Tú pagas</span><span class="valor verde" id="dia-detalle-precio">$45.00</span></div>
+          <hr class="divider"/>
+          <div class="precio-fila total"><span class="label">Total</span><span class="valor" id="dia-detalle-total">$90.00</span></div>
+        </div>
+        <div class="extras-titulo">Extras</div>
+        <div id="dia-detalle-extras"></div>
+        <button class="btn-pedir" id="btn-preorden" onclick="preOrdenar()">Pre-ordenar este día</button>
+      </div>
+    </div>
+
+    <!-- TAB: HISTORIAL -->
+    <div id="tab-historial" style="display:none">
+      <div class="saludo"><h2>Mi historial</h2><p>Últimas comidas registradas</p></div>
+      <div class="card">
+        <div id="historial-lista">
+          <div style="text-align:center;padding:2rem;color:var(--texto-3);font-size:.9rem">Cargando historial...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: PERFIL -->
+    <div id="tab-perfil" style="display:none">
+      <div class="card">
+        <div class="perfil-avatar" id="perfil-avatar">—</div>
+        <div class="perfil-nombre" id="perfil-nombre-full">—</div>
+        <div class="perfil-email" id="perfil-email-txt">—</div>
+        <div style="margin-top:1.25rem">
+          <div class="perfil-fila"><span class="lbl">Empresa</span><span>Buen Fruto</span></div>
+          <div class="perfil-fila"><span class="lbl">Rol</span><span>Empleado</span></div>
+          <div class="perfil-fila"><span class="lbl">Esta semana</span><span id="perfil-semana">— comidas</span></div>
+          <div class="perfil-fila"><span class="lbl">Gasto acumulado</span><span id="perfil-gasto">$—</span></div>
+        </div>
+        <button class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <button class="nav-btn activo" id="nav-inicio" onclick="mostrarTab('tab-inicio', this)">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Inicio
+    </button>
+    <button class="nav-btn" id="nav-menu" onclick="mostrarTab('tab-menu', this)">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 6v6l4 2"/></svg>
+      Menú
+    </button>
+    <button class="nav-btn" id="nav-historial" onclick="mostrarTab('tab-historial', this)">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Historial
+    </button>
+    <button class="nav-btn" id="nav-perfil" onclick="mostrarTab('tab-perfil', this)">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Perfil
+    </button>
+  </nav>
+</div>
+
+<!-- ══════ SCRIPTS ══════ -->
+<script type="module">
+import { initializeApp }              from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+                                      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp }
+                                      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
+  authDomain:        "buen-fruto.firebaseapp.com",
+  projectId:         "buen-fruto",
+  storageBucket:     "buen-fruto.firebasestorage.app",
+  messagingSenderId: "931992831636",
+  appId:             "1:931992831636:web:65ee6652748f6418dc9681",
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── Estado global ──
+let usuario     = null;
+let empleadoDoc = null;
+let ordenHoy    = null;
+let planActivo  = null;
+let diasPlan    = [];
+let extrasSeleccionados = [];
+
+// ── Helpers fecha ──
+const DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const hoy   = () => { const d = new Date(); return d.toISOString().slice(0,10); };
+const fmtFecha = d => { const dt = new Date(d+'T12:00:00'); return `${DIAS[dt.getDay()]} ${dt.getDate()} de ${MESES[dt.getMonth()]}`; };
+
+// ── Ventana horaria (2:00pm – 4:30pm) ──
+function dentroDeVentana() {
+  const ahora = new Date();
+  const h = ahora.getHours(), m = ahora.getMinutes();
+  return (h === 14) || (h === 15) || (h === 16 && m <= 30);
+}
+
+// ── Mostrar vista ──
+function mostrarVista(id) {
+  document.querySelectorAll('.vista').forEach(v => v.classList.remove('activa'));
+  document.getElementById(id).classList.add('activa');
+}
+
+// ── LOGIN ──
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass  = document.getElementById('inp-pass').value;
+  const err   = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+  err.style.display = 'none';
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    err.textContent = 'Correo o contraseña incorrectos';
+    err.style.display = 'block';
+    btn.textContent = 'Entrar'; btn.disabled = false;
+  }
+});
+
+// ── AUTH STATE ──
+onAuthStateChanged(auth, async user => {
+  if (!user) { mostrarVista('v-login'); return; }
+  usuario = user;
+  mostrarVista('v-loader');
+  const snap = await getDoc(doc(db, 'empleados', user.uid));
+  if (!snap.exists()) { await signOut(auth); return; }
+  empleadoDoc = snap.data();
+  const rol = empleadoDoc.rol;
+  if (rol === 'empleado') await iniciarEmpleado();
+  else if (rol === 'admin') window.location.href = 'admin.html';
+  else if (rol === 'chef')  window.location.href = 'chef.html';
+  else if (rol === 'rh')    window.location.href = 'rh.html';
+});
+
+// ── INICIO EMPLEADO ──
+async function iniciarEmpleado() {
+  const nombre = empleadoDoc.nombre;
+  document.getElementById('topbar-nombre').textContent = nombre.split(' ')[0];
+  document.getElementById('saludo-nombre').textContent = `Hola, ${nombre.split(' ')[0]} 👋`;
+  document.getElementById('saludo-fecha').textContent  = `Hoy es ${fmtFecha(hoy())}`;
+  document.getElementById('perfil-nombre-full').textContent = nombre;
+  document.getElementById('perfil-email-txt').textContent   = usuario.email;
+  document.getElementById('perfil-avatar').textContent      = nombre.split(' ').map(n=>n[0]).slice(0,2).join('');
+
+  // Ventana horaria
+  if (!dentroDeVentana()) document.getElementById('ventana-aviso').style.display = 'block';
+
+  await cargarPlanActivo();
+  await cargarOrdenHoy();
+  await cargarHistorial();
+  mostrarVista('v-empleado');
+}
+
+// ── CARGAR PLAN ──
+async function cargarPlanActivo() {
+  const hoyStr = hoy();
+  const q = query(collection(db,'planes'),
+    where('empresa_id','==', empleadoDoc.empresa_id),
+    where('activo','==', true));
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+  planActivo = { id: snap.docs[0].id, ...snap.docs[0].data() };
+
+  // Cargar días visibles (hoy + 5)
+  diasPlan = [];
+  for (let i = 0; i <= 5; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const fechaStr = d.toISOString().slice(0,10);
+    const diaSnap  = await getDoc(doc(db,'planes', planActivo.id, 'dias', fechaStr));
+    if (diaSnap.exists()) diasPlan.push({ fecha: fechaStr, ...diaSnap.data() });
+  }
+
+  // Menú de hoy
+  const diaHoy = diasPlan.find(d => d.fecha === hoy());
+  if (diaHoy) {
+    document.getElementById('menu-hoy-nombre').textContent = diaHoy.buffet_nombre;
+    renderExtrasHoy(diaHoy.extras || []);
+  } else {
+    document.getElementById('menu-hoy-nombre').textContent = 'Sin menú disponible para hoy';
+  }
+
+  renderDiasTabs();
+}
+
+// ── EXTRAS HOY ──
+function renderExtrasHoy(extras) {
+  const contenedor = document.getElementById('extras-lista-hoy');
+  contenedor.innerHTML = '';
+  extrasSeleccionados = [];
+  if (!extras.length) { contenedor.innerHTML = '<p style="font-size:.8rem;color:var(--texto-3)">Sin extras disponibles hoy</p>'; return; }
+  extras.forEach((ex, i) => {
+    const div = document.createElement('div');
+    div.className = 'extra-item';
+    div.innerHTML = `<div><div class="extra-nombre">${ex.nombre}</div></div><div style="display:flex;align-items:center;gap:.5rem"><span class="extra-precio">+$${ex.precio}</span><div class="check-icon"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></div></div>`;
+    div.addEventListener('click', () => toggleExtra(div, ex, i));
+    contenedor.appendChild(div);
+  });
+  actualizarPrecioTotal();
+}
+
+function toggleExtra(div, ex, i) {
+  const idx = extrasSeleccionados.findIndex(e => e.nombre === ex.nombre);
+  if (idx === -1) { extrasSeleccionados.push(ex); div.classList.add('seleccionado'); }
+  else { extrasSeleccionados.splice(idx, 1); div.classList.remove('seleccionado'); }
+  actualizarPrecioTotal();
+}
+
+function actualizarPrecioTotal() {
+  const extrasTotal = extrasSeleccionados.reduce((s, e) => s + e.precio, 0);
+  const cargo = 45 + extrasTotal;
+  const total = 90 + extrasTotal;
+  document.getElementById('precio-empleado-hoy').textContent = `$${cargo}.00`;
+  document.getElementById('precio-total-hoy').textContent    = `$${total}.00`;
+}
+
+// ── ORDEN DE HOY ──
+async function cargarOrdenHoy() {
+  const q = query(collection(db,'ordenes'),
+    where('empleado_id','==', usuario.uid),
+    where('fecha','==', hoy()),
+    where('estado','in',['pagado','usado']));
+  const snap = await getDocs(q);
+  if (snap.empty) { ordenHoy = null; return; }
+  ordenHoy = { id: snap.docs[0].id, ...snap.docs[0].data() };
+  if (ordenHoy.estado === 'pagado') mostrarBarcode(ordenHoy);
+}
+
+// ── MOSTRAR BARCODE ──
+function mostrarBarcode(orden) {
+  document.getElementById('card-barcode').style.display = 'block';
+  document.getElementById('btn-pedir-momento').style.display = 'none';
+  document.getElementById('btn-secundario') && null;
+  const token = orden.barcode;
+  document.getElementById('barcode-num').textContent = token.toUpperCase().slice(0,20);
+  generarBarcodeSVG(token);
+}
+
+function generarBarcodeSVG(token) {
+  const svg = document.getElementById('barcode-svg');
+  svg.innerHTML = '';
+  // Barcode simplificado visual (Code 128 estético)
+  const bits = [];
+  for (let i = 0; i < token.length; i++) {
+    const c = token.charCodeAt(i);
+    for (let b = 7; b >= 0; b--) bits.push((c >> b) & 1);
+  }
+  const totalBits = bits.length;
+  const svgW = 280, svgH = 80, margen = 10;
+  const barW = (svgW - margen*2) / totalBits;
+  bits.forEach((bit, i) => {
+    if (!bit) return;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x', margen + i * barW);
+    rect.setAttribute('y', 8);
+    rect.setAttribute('width', Math.max(barW * .85, .8));
+    rect.setAttribute('height', 56);
+    rect.setAttribute('fill', '#1A1A1A');
+    svg.appendChild(rect);
+  });
+}
+
+// ── PEDIR AHORA ──
+window.pedirAhora = async function() {
+  if (!dentroDeVentana()) { alert('El comedor solo acepta pedidos de 2:00 pm a 4:30 pm'); return; }
+  if (ordenHoy) { alert('Ya tienes una orden activa para hoy'); return; }
+  const diaHoy = diasPlan.find(d => d.fecha === hoy());
+  if (!diaHoy) { alert('No hay menú disponible para hoy'); return; }
+
+  const extrasTotal = extrasSeleccionados.reduce((s, e) => s + e.precio, 0);
+  const barcode     = crypto.randomUUID();
+  const items       = [{ tipo:'buffet', nombre: diaHoy.buffet_nombre, precio: 90 }, ...extrasSeleccionados.map(e => ({ tipo:'extra', nombre: e.nombre, precio: e.precio }))];
+
+  try {
+    const ref = await addDoc(collection(db,'ordenes'), {
+      empleado_id:     usuario.uid,
+      empleado_nombre: empleadoDoc.nombre,
+      empresa_id:      empleadoDoc.empresa_id,
+      dia_id:          diaHoy.fecha,
+      plan_id:         planActivo.id,
+      tipo:            'momento',
+      hora_entrega:    null,
+      fecha:           hoy(),
+      items,
+      total:           90 + extrasTotal,
+      subsidio:        45,
+      extras_total:    extrasTotal,
+      cargo_empleado:  45 + extrasTotal,
+      total_comedor:   90 + extrasTotal,
+      barcode,
+      estado:          'pagado',
+      creado_en:       serverTimestamp(),
+      escaneado_en:    null,
+      cancelado_en:    null,
+    });
+    ordenHoy = { id: ref.id, barcode, estado:'pagado', items, cargo_empleado: 45 + extrasTotal };
+    mostrarBarcode(ordenHoy);
+  } catch(e) {
+    alert('Error al procesar tu orden. Intenta de nuevo.');
+    console.error(e);
+  }
+};
+
+// ── PRE-ORDENAR ──
+window.preOrdenar = async function() {
+  const dia = diasPlan[diaSeleccionado];
+  if (!dia) return;
+  const horaEntrega = prompt('¿A qué hora quieres que esté lista tu comida? (ej. 14:30)');
+  if (!horaEntrega) return;
+  const barcode     = crypto.randomUUID();
+  const items       = [{ tipo:'buffet', nombre: dia.buffet_nombre, precio: 90 }];
+  try {
+    await addDoc(collection(db,'ordenes'), {
+      empleado_id:     usuario.uid,
+      empleado_nombre: empleadoDoc.nombre,
+      empresa_id:      empleadoDoc.empresa_id,
+      dia_id:          dia.fecha,
+      plan_id:         planActivo.id,
+      tipo:            'pre',
+      hora_entrega:    horaEntrega,
+      fecha:           dia.fecha,
+      items,
+      total:           90,
+      subsidio:        45,
+      extras_total:    0,
+      cargo_empleado:  45,
+      total_comedor:   90,
+      barcode,
+      estado:          'pagado',
+      creado_en:       serverTimestamp(),
+      escaneado_en:    null,
+      cancelado_en:    null,
+    });
+    alert(`✓ Pre-orden registrada para el ${fmtFecha(dia.fecha)} a las ${horaEntrega}`);
+  } catch(e) {
+    alert('Error al registrar la pre-orden.');
+    console.error(e);
+  }
+};
+
+// ── CANCELAR ──
+window.cancelarOrden = async function() {
+  if (!ordenHoy || !confirm('¿Seguro que quieres cancelar tu orden de hoy?')) return;
+  await updateDoc(doc(db,'ordenes', ordenHoy.id), { estado:'cancelado', cancelado_en: serverTimestamp() });
+  ordenHoy = null;
+  document.getElementById('card-barcode').style.display = 'none';
+  document.getElementById('btn-pedir-momento').style.display = 'block';
+  alert('Orden cancelada.');
+};
+
+// ── HISTORIAL ──
+async function cargarHistorial() {
+  const q = query(collection(db,'ordenes'),
+    where('empleado_id','==', usuario.uid),
+    where('estado','==','usado'),
+    orderBy('fecha','desc'), limit(20));
+  const snap  = await getDocs(q);
+  const lista = document.getElementById('historial-lista');
+  if (snap.empty) { lista.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--texto-3);font-size:.9rem">No hay comidas registradas aún</div>'; return; }
+  lista.innerHTML = '';
+  snap.forEach(d => {
+    const o   = d.data();
+    const div = document.createElement('div');
+    div.className = 'historial-item';
+    div.innerHTML = `<div><div class="hist-fecha">${fmtFecha(o.fecha)}</div><div class="hist-nombre">${o.items?.[0]?.nombre || 'Buffet'}</div></div><div class="hist-monto">-$${o.cargo_empleado}</div>`;
+    lista.appendChild(div);
+  });
+}
+
+// ── TABS MENÚ SEMANAL ──
+let diaSeleccionado = 0;
+function renderDiasTabs() {
+  const wrap = document.getElementById('dias-tabs');
+  wrap.innerHTML = '';
+  diasPlan.forEach((dia, i) => {
+    const dt  = new Date(dia.fecha+'T12:00:00');
+    const btn = document.createElement('div');
+    btn.className = 'dia-tab' + (i===0?' activo':'');
+    btn.innerHTML = `<span class="dia-letra">${DIAS[dt.getDay()]}</span><span class="dia-num">${dt.getDate()}</span>`;
+    btn.addEventListener('click', () => { diaSeleccionado = i; seleccionarDia(i); });
+    wrap.appendChild(btn);
+  });
+  seleccionarDia(0);
+}
+
+function seleccionarDia(i) {
+  document.querySelectorAll('.dia-tab').forEach((t,j) => t.classList.toggle('activo', j===i));
+  const dia = diasPlan[i];
+  if (!dia) return;
+  document.getElementById('dia-detalle-fecha').textContent  = fmtFecha(dia.fecha);
+  document.getElementById('dia-detalle-nombre').textContent = dia.buffet_nombre;
+  const extrasWrap = document.getElementById('dia-detalle-extras');
+  extrasWrap.innerHTML = (dia.extras||[]).length
+    ? dia.extras.map(e=>`<div class="extra-item"><div class="extra-nombre">${e.nombre}</div><span class="extra-precio">+$${e.precio}</span></div>`).join('')
+    : '<p style="font-size:.8rem;color:var(--texto-3)">Sin extras este día</p>';
+  const esHoy = dia.fecha === hoy();
+  document.getElementById('btn-preorden').style.display = esHoy ? 'none' : 'block';
+}
+
+// ── NAV TABS ──
+window.mostrarTab = function(tabId, btn) {
+  ['tab-inicio','tab-menu','tab-historial','tab-perfil'].forEach(id => {
+    document.getElementById(id).style.display = id === tabId ? 'block' : 'none';
+  });
+  if (btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('activo'));
+    btn.classList.add('activo');
+  }
+};
+
+// ── CERRAR SESIÓN ──
+window.cerrarSesion = async function() {
+  if (confirm('¿Cerrar sesión?')) await signOut(auth);
+};
+</script>
+</body>
+</html>
