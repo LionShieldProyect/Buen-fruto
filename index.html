@@ -493,10 +493,7 @@ onAuthStateChanged(auth, async user => {
   if (!snap.exists()) { await signOut(auth); return; }
   empleadoDoc = snap.data();
   const rol = empleadoDoc.rol;
-  if (rol === 'empleado') await iniciarEmpleado();
-  else if (rol === 'admin') window.location.href = 'admin.html';
-  else if (rol === 'chef')  window.location.href = 'chef.html';
-  else if (rol === 'rh')    window.location.href = 'rh.html';
+  await iniciarEmpleado();
 });
 
 // ── INICIO EMPLEADO ──
