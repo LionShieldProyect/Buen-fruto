@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Buen Fruto — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --v:#2D5016;--v2:#234010;--vl:#EBF2E3;--vl2:#F4F8EE;
+  --c:#4A1942;--cl:#F5EFF4;
+  --crema:#F7F3EE;--w:#FFFFFF;
+  --negro:#1C1C1E;--g1:#48484A;--g2:#8E8E93;--g3:#C7C7CC;
+  --borde:#E8E2DA;--borde2:#F0EBE3;
+  --naranja:#C65E00;--naranjal:#FFF3E0;
+  --rojo:#C0392B;--rojol:#FDEDEC;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--crema);color:var(--negro);-webkit-font-smoothing:antialiased}
+
+/* LAYOUT */
+.layout{display:flex;height:100vh;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--v);
+  display:flex;flex-direction:column;
+  padding:0;overflow:hidden;
+}
+.sidebar-brand{
+  padding:1.5rem 1.25rem 1.25rem;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:.6rem;margin-bottom:.2rem;
+}
+.sidebar-logo-ring{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+}
+.sidebar-brand-name{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.2rem;font-weight:700;color:var(--w);
+}
+.sidebar-role{font-size:.68rem;color:rgba(255,255,255,.5);letter-spacing:.06em;text-transform:uppercase;margin-top:.15rem}
+
+.sidebar-nav{flex:1;padding:1rem 0;overflow-y:auto}
+.nav-item{
+  display:flex;align-items:center;gap:.65rem;
+  padding:.7rem 1.25rem;cursor:pointer;
+  font-size:.85rem;font-weight:500;color:rgba(255,255,255,.65);
+  transition:all .15s;border-left:3px solid transparent;
+}
+.nav-item:hover{background:rgba(255,255,255,.07);color:var(--w)}
+.nav-item.on{background:rgba(255,255,255,.1);color:var(--w);border-left-color:var(--w)}
+.nav-item svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.nav-sep{height:1px;background:rgba(255,255,255,.1);margin:.5rem 1.25rem}
+
+.sidebar-footer{
+  padding:1rem 1.25rem;
+  border-top:1px solid rgba(255,255,255,.1);
+  font-size:.75rem;color:rgba(255,255,255,.4);
+}
+.btn-salir-sidebar{
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.8rem;color:rgba(255,255,255,.6);
+  cursor:pointer;margin-top:.35rem;
+  background:none;border:none;font-family:'Inter',sans-serif;
+  padding:0;transition:color .15s;
+}
+.btn-salir-sidebar:hover{color:var(--w)}
+.btn-salir-sidebar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar-admin{
+  height:56px;background:var(--w);border-bottom:1px solid var(--borde2);
+  padding:0 2rem;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.topbar-titulo{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:700;color:var(--negro)}
+.topbar-right-admin{display:flex;align-items:center;gap:.75rem;font-size:.8rem;color:var(--g2)}
+
+.contenido{padding:2rem;flex:1}
+
+/* CARDS MÉTRICAS */
+.metricas{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+.metrica{background:var(--w);border-radius:12px;border:1px solid var(--borde2);padding:1.25rem 1.5rem;box-shadow:var(--shadow)}
+.metrica-label{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.35rem}
+.metrica-val{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:700;color:var(--negro);line-height:1}
+.metrica-sub{font-size:.72rem;color:var(--g2);margin-top:.25rem}
+.metrica.verde .metrica-val{color:var(--v)}
+.metrica.ciruela .metrica-val{color:var(--c)}
+
+/* SECCIONES */
+.seccion{display:none}
+.seccion.on{display:block}
+
+.sec-titulo{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--negro);margin-bottom:.25rem}
+.sec-sub{font-size:.82rem;color:var(--g2);margin-bottom:1.5rem}
+
+/* CARD */
+.card{background:var(--w);border-radius:12px;border:1px solid var(--borde2);box-shadow:var(--shadow);margin-bottom:1.25rem;overflow:hidden}
+.card-head{padding:1rem 1.5rem;border-bottom:1px solid var(--borde2);display:flex;align-items:center;justify-content:space-between}
+.card-titulo{font-size:.9rem;font-weight:700;color:var(--negro)}
+.card-body{padding:1.5rem}
+
+/* BOTONES */
+.btn{padding:.65rem 1.25rem;border-radius:8px;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:.4rem}
+.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-v{background:var(--v);color:var(--w)}
+.btn-v:hover{background:var(--v2)}
+.btn-v:active{transform:scale(.98)}
+.btn-outline{background:transparent;color:var(--v);border:1.5px solid var(--v)}
+.btn-outline:hover{background:var(--vl)}
+.btn-danger{background:var(--rojol);color:var(--rojo)}
+.btn-danger:hover{background:#fbd9d6}
+.btn-sm{padding:.45rem .85rem;font-size:.78rem}
+
+/* INPUTS */
+.campo{margin-bottom:1rem}
+.campo label{display:block;font-size:.72rem;font-weight:600;color:var(--g2);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem}
+.campo input,.campo select,.campo textarea{
+  width:100%;padding:.72rem 1rem;
+  border:1.5px solid var(--borde);border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:.88rem;
+  color:var(--negro);background:var(--crema);
+  outline:none;transition:border-color .2s;
+}
+.campo input:focus,.campo select:focus,.campo textarea:focus{border-color:var(--v);background:var(--w)}
+.campo textarea{resize:vertical;min-height:80px}
+
+/* GRID FORMULARIO */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-grid.tres{grid-template-columns:1fr 1fr 1fr}
+.span-2{grid-column:span 2}
+
+/* TABLA */
+.tabla-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead th{padding:.65rem 1rem;text-align:left;font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);border-bottom:1px solid var(--borde2);background:var(--crema)}
+tbody td{padding:.75rem 1rem;border-bottom:1px solid var(--borde2);color:var(--g1)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--crema)}
+.badge{display:inline-flex;padding:.18rem .55rem;border-radius:12px;font-size:.68rem;font-weight:700}
+.badge-v{background:var(--vl);color:var(--v)}
+.badge-g{background:#F2F2F7;color:var(--g2)}
+.badge-r{background:var(--rojol);color:var(--rojo)}
+.badge-c{background:var(--cl);color:var(--c)}
+
+/* UPLOAD CSV */
+.drop-area{
+  border:2px dashed var(--borde);border-radius:12px;
+  padding:2.5rem;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;
+  background:var(--crema);
+}
+.drop-area:hover,.drop-area.drag{border-color:var(--v);background:var(--vl2)}
+.drop-icon{width:40px;height:40px;margin:0 auto .75rem;opacity:.4}
+.drop-txt{font-size:.88rem;font-weight:600;color:var(--g1)}
+.drop-sub{font-size:.75rem;color:var(--g3);margin-top:.25rem}
+input[type=file]{display:none}
+
+/* PROGRESO */
+.progreso-wrap{background:var(--borde2);border-radius:20px;height:6px;margin-top:.5rem}
+.progreso-bar{background:var(--v);height:6px;border-radius:20px;transition:width .3s}
+
+/* MENÚ EDITOR */
+.dia-selector{display:flex;gap:.4rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.dia-pill{
+  padding:.45rem 1rem;border-radius:20px;
+  border:1.5px solid var(--borde);background:var(--w);
+  font-size:.8rem;font-weight:600;color:var(--g2);
+  cursor:pointer;transition:all .15s;
+}
+.dia-pill.on{border-color:var(--v);background:var(--v);color:var(--w)}
+.dia-pill.tiene{border-color:var(--v);color:var(--v)}
+
+/* PLATILLOS TAGS */
+.tags-wrap{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.tag{
+  display:flex;align-items:center;gap:.35rem;
+  background:var(--vl);color:var(--v);
+  padding:.3rem .75rem;border-radius:20px;
+  font-size:.78rem;font-weight:600;
+}
+.tag.naranja{background:var(--naranjal);color:var(--naranja)}
+.tag-x{cursor:pointer;font-size:.9rem;line-height:1;opacity:.6}
+.tag-x:hover{opacity:1}
+.tag-input-row{display:flex;gap:.5rem;margin-top:.5rem}
+.tag-input{flex:1;padding:.55rem .85rem;border:1.5px solid var(--borde);border-radius:8px;font-family:'Inter',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s;background:var(--crema)}
+.tag-input:focus{border-color:var(--v);background:var(--w)}
+
+/* ESTADO MENSAJE */
+.msg{padding:.75rem 1rem;border-radius:8px;font-size:.82rem;margin-top:1rem;display:none}
+.msg.ok{background:var(--vl);color:var(--v);display:block}
+.msg.err{background:var(--rojol);color:var(--rojo);display:block}
+
+/* REPORTES */
+.reporte-fila{display:flex;justify-content:space-between;align-items:center;padding:.85rem 0;border-bottom:1px solid var(--borde2)}
+.reporte-fila:last-child{border-bottom:none}
+.reporte-semana{font-size:.85rem;font-weight:600;color:var(--negro)}
+.reporte-detalle{font-size:.75rem;color:var(--g2);margin-top:.1rem}
+.reporte-monto{font-size:1rem;font-weight:800;color:var(--v)}
+
+/* SPINNER */
+.spinner{width:16px;height:16px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;align-items:center;gap:.5rem;color:var(--g2);font-size:.85rem;padding:1.5rem 0}
+
+/* LOGIN ADMIN */
+#pg-login{display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(160deg,#1a2f0c,var(--v))}
+.login-box{background:var(--w);border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:360px;box-shadow:0 24px 64px rgba(0,0,0,.3)}
+.login-brand{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:700;color:var(--v);text-align:center;margin-bottom:.25rem}
+.login-sub{font-size:.8rem;color:var(--g2);text-align:center;margin-bottom:1.75rem}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="pg-login">
+  <div class="login-box">
+    <div class="login-brand">Buen Fruto</div>
+    <div class="login-sub">Panel de administración</div>
+    <div class="campo"><label>Correo</label><input type="email" id="inp-email" placeholder="admin@empresa.com" autocomplete="email"/></div>
+    <div class="campo"><label>Contraseña</label><input type="password" id="inp-pass" placeholder="••••••••"/></div>
+    <button class="btn btn-v" style="width:100%;justify-content:center;padding:.85rem;margin-top:.5rem" id="btn-login">Entrar</button>
+    <div class="msg err" id="login-err" style="margin-top:.75rem">Acceso no autorizado</div>
+  </div>
+</div>
+
+<!-- APP ADMIN -->
+<div id="pg-admin" style="display:none" class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-ring">
+          <svg viewBox="0 0 44 44" width="18" height="18" fill="none">
+            <ellipse cx="19" cy="29" rx="7" ry="9" fill="rgba(255,255,255,.9)"/>
+            <ellipse cx="29" cy="30" rx="6" ry="8" fill="rgba(255,255,255,.55)"/>
+            <path d="M19 20 Q20 9 27 7 Q25 16 29 22" stroke="rgba(255,255,255,.7)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="sidebar-brand-name">Buen Fruto</span>
+      </div>
+      <div class="sidebar-role">Administración</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item on" data-sec="dashboard" onclick="irSec('dashboard',this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+      </div>
+      <div class="nav-item" data-sec="empleados" onclick="irSec('empleados',this)">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Empleados
+      </div>
+      <div class="nav-item" data-sec="menus" onclick="irSec('menus',this)">
+        <svg viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2"/><path d="M18 2v3a2 2 0 0 0 2 2h1"/><path d="M21 22H9"/></svg>Menús
+      </div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" data-sec="ordenes" onclick="irSec('ordenes',this)">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Órdenes hoy
+      </div>
+      <div class="nav-item" data-sec="reportes" onclick="irSec('reportes',this)">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>Reportes
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="admin-nombre" style="font-size:.8rem;color:rgba(255,255,255,.7)">—</div>
+      <button class="btn-salir-sidebar" id="btn-salir">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Cerrar sesión
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar-admin">
+      <span class="topbar-titulo" id="topbar-titulo">Dashboard</span>
+      <div class="topbar-right-admin" id="topbar-fecha">—</div>
+    </div>
+
+    <div class="contenido">
+
+      <!-- DASHBOARD -->
+      <div class="seccion on" id="sec-dashboard">
+        <div class="metricas" id="metricas-wrap">
+          <div class="metrica verde"><div class="metrica-label">Órdenes hoy</div><div class="metrica-val" id="m-ordenes">—</div><div class="metrica-sub">En el comedor</div></div>
+          <div class="metrica"><div class="metrica-label">Empleados activos</div><div class="metrica-val" id="m-empleados">—</div><div class="metrica-sub">Registrados</div></div>
+          <div class="metrica ciruela"><div class="metrica-label">Pre-órdenes hoy</div><div class="metrica-val" id="m-preordenes">—</div><div class="metrica-sub">Con hora agendada</div></div>
+          <div class="metrica"><div class="metrica-label">Recaudado hoy</div><div class="metrica-val" id="m-recaudado">—</div><div class="metrica-sub">Empleados + empresa</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-titulo">Órdenes de hoy</span><span id="dashboard-hora" style="font-size:.75rem;color:var(--g3)">—</span></div>
+          <div class="card-body">
+            <div class="tabla-wrap"><table>
+              <thead><tr><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Hora</th><th>Tipo</th><th>Total</th><th>Estado</th></tr></thead>
+              <tbody id="tabla-dashboard"></tbody>
+            </table></div>
+            <div class="loading" id="loading-dashboard"><div class="spinner"></div>Cargando órdenes...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPLEADOS -->
+      <div class="seccion" id="sec-empleados">
+        <div class="sec-titulo">Empleados</div>
+        <div class="sec-sub">Gestiona el directorio de empleados. Sube un CSV o agrega uno por uno.</div>
+
+        <div class="card">
+          <div class="card-head"><span class="card-titulo">Subir empleados por CSV</span></div>
+          <div class="card-body">
+            <p style="font-size:.82rem;color:var(--g2);margin-bottom:1rem">El CSV debe tener columnas: <strong>nombre, email, password</strong></p>
+            <div class="drop-area" id="drop-area" onclick="document.getElementById('csv-input').click()">
+              <div class="drop-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--g3)" stroke-width="1.5" stroke-linecap="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><polyline points="9 15 12 18 15 15"/>
+                </svg>
+              </div>
+              <div class="drop-txt">Arrastra tu CSV aquí o haz clic para seleccionar</div>
+              <div class="drop-sub">nombre, email, password</div>
+            </div>
+            <input type="file" id="csv-input" accept=".csv"/>
+            <div id="csv-preview" style="display:none;margin-top:1rem">
+              <div style="font-size:.82rem;font-weight:600;color:var(--negro);margin-bottom:.5rem" id="csv-info">—</div>
+              <div class="progreso-wrap" id="progreso-wrap" style="display:none"><div class="progreso-bar" id="progreso-bar" style="width:0%"></div></div>
+              <div style="display:flex;gap:.5rem;margin-top:.75rem">
+                <button class="btn btn-v btn-sm" id="btn-importar">Importar empleados</button>
+                <button class="btn btn-outline btn-sm" onclick="cancelarCSV()">Cancelar</button>
+              </div>
+            </div>
+            <div class="msg" id="csv-msg"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="card-titulo">Directorio de empleados</span>
+            <button class="btn btn-v btn-sm" onclick="mostrarModalEmpleado()">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar
+            </button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="loading" id="loading-emp"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Cargando empleados...</div></div>
+            <div class="tabla-wrap"><table>
+              <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody id="tabla-empleados"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MENÚS -->
+      <div class="seccion" id="sec-menus">
+        <div class="sec-titulo">Menús de la semana</div>
+        <div class="sec-sub">Captura el menú de cada día. Los empleados lo verán en su app.</div>
+
+        <div class="dia-selector" id="dia-selector"></div>
+
+        <div class="card" id="menu-editor">
+          <div class="card-head">
+            <span class="card-titulo" id="menu-editor-titulo">Selecciona un día</span>
+            <span class="badge" id="menu-editor-badge"></span>
+          </div>
+          <div class="card-body" id="menu-editor-body">
+            <div style="text-align:center;padding:2rem;color:var(--g3)">Selecciona un día para editar su menú</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÓRDENES HOY -->
+      <div class="seccion" id="sec-ordenes">
+        <div class="sec-titulo">Órdenes de hoy</div>
+        <div class="sec-sub" id="ordenes-fecha">—</div>
+        <div class="card">
+          <div class="card-body" style="padding:0">
+            <div class="tabla-wrap"><table>
+              <thead><tr><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Tipo</th><th>Hora</th><th>Total</th><th>Estado</th></tr></thead>
+              <tbody id="tabla-ordenes"></tbody>
+            </table></div>
+            <div class="loading" id="loading-ordenes"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Cargando...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORTES -->
+      <div class="seccion" id="sec-reportes">
+        <div class="sec-titulo">Reportes</div>
+        <div class="sec-sub">Resumen de consumo y cargos por semana.</div>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-titulo">Resumen semanal</span>
+            <button class="btn btn-outline btn-sm" onclick="exportarCSV()">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV
+            </button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="tabla-wrap"><table>
+              <thead><tr><th>Empleado</th><th>Comidas</th><th>Cargo empleado</th><th>Cargo empresa</th><th>Total</th></tr></thead>
+              <tbody id="tabla-reporte"></tbody>
+            </table></div>
+            <div class="loading" id="loading-reporte"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Calculando reporte...</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMPLEADO -->
+<div id="modal-emp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(4px)">
+  <div style="background:var(--w);border-radius:16px;padding:2rem;width:100%;max-width:420px">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;margin-bottom:1.25rem" id="modal-emp-titulo">Nuevo empleado</div>
+    <div class="campo"><label>Nombre completo</label><input type="text" id="emp-nombre" placeholder="Juan García López"/></div>
+    <div class="campo"><label>Correo electrónico</label><input type="email" id="emp-email" placeholder="juan@empresa.com"/></div>
+    <div class="campo"><label>Contraseña inicial</label><input type="password" id="emp-pass" placeholder="Mínimo 6 caracteres"/></div>
+    <div class="campo"><label>Rol</label>
+      <select id="emp-rol">
+        <option value="empleado">Empleado</option>
+        <option value="chef">Chef</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="msg" id="emp-msg"></div>
+    <div style="display:flex;gap:.75rem;margin-top:1.25rem">
+      <button class="btn btn-v" style="flex:1;justify-content:center" id="btn-guardar-emp">Guardar</button>
+      <button class="btn btn-outline" onclick="cerrarModalEmp()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc,
+  collection, query, where, orderBy, onSnapshot, getDocs, writeBatch,
+  serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const cfg = {
+  apiKey:"AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
+  authDomain:"buen-fruto.firebaseapp.com",
+  projectId:"buen-fruto",
+  messagingSenderId:"931992831636",
+  appId:"1:931992831636:web:65ee6652748f6418dc9681"
+};
+const app  = initializeApp(cfg);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+const DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function hoy(){ return new Date().toISOString().slice(0,10); }
+function fmtF(f){ const d=new Date(f+'T12:00:00'); return DS[d.getDay()]+' '+d.getDate()+' de '+MS[d.getMonth()]; }
+function getDias(){
+  const h=new Date(),dia=h.getDay(),lun=new Date(h);
+  if(dia===0)lun.setDate(h.getDate()+1);
+  else if(dia===6)lun.setDate(h.getDate()+2);
+  else lun.setDate(h.getDate()-(dia-1));
+  return Array.from({length:5},(_,i)=>{const d=new Date(lun);d.setDate(lun.getDate()+i);return d.toISOString().slice(0,10);});
+}
+
+let perfil=null, unsubOrdenes=null, unsubEmpleados=null;
+let csvData=[], diaMenuSel=null;
+let platillosBuf=[], extrasList=[];
+
+// ── AUTH ──
+onAuthStateChanged(auth, async user=>{
+  if(!user){ showLogin(); return; }
+  const snap=await getDoc(doc(db,'empleados',user.uid));
+  if(!snap.exists()||snap.data().rol!=='admin'){ await signOut(auth); showLogin(); document.getElementById('login-err').style.display='block'; return; }
+  perfil=snap.data();
+  iniciarAdmin();
+});
+
+function showLogin(){ document.getElementById('pg-login').style.display='flex'; document.getElementById('pg-admin').style.display='none'; }
+
+document.getElementById('btn-login').addEventListener('click', async()=>{
+  const e=document.getElementById('inp-email').value.trim();
+  const p=document.getElementById('inp-pass').value;
+  const err=document.getElementById('login-err');
+  if(!e||!p){ err.style.display='block'; return; }
+  err.style.display='none';
+  document.getElementById('btn-login').textContent='Entrando...';
+  try{ await signInWithEmailAndPassword(auth,e,p); }
+  catch{ err.style.display='block'; document.getElementById('btn-login').textContent='Entrar'; }
+});
+
+document.getElementById('btn-salir').addEventListener('click', async()=>{
+  if(unsubOrdenes)unsubOrdenes();
+  if(unsubEmpleados)unsubEmpleados();
+  await signOut(auth); showLogin();
+  document.getElementById('btn-login').textContent='Entrar';
+});
+
+// ── INICIAR ──
+function iniciarAdmin(){
+  document.getElementById('pg-login').style.display='none';
+  document.getElementById('pg-admin').style.display='flex';
+  document.getElementById('admin-nombre').textContent=perfil.nombre||perfil.email;
+  const ahora=new Date();
+  document.getElementById('topbar-fecha').textContent=DS[ahora.getDay()]+' '+ahora.getDate()+' de '+MF[ahora.getMonth()];
+  document.getElementById('ordenes-fecha').textContent='Órdenes del '+fmtF(hoy());
+  cargarDashboard();
+  cargarEmpleados();
+  initMenuEditor();
+}
+
+// ── NAVEGACIÓN ──
+window.irSec=function(sec,el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.seccion').forEach(s=>s.classList.remove('on'));
+  document.getElementById('sec-'+sec).classList.add('on');
+  const titulos={dashboard:'Dashboard',empleados:'Empleados',menus:'Menús de la semana',ordenes:'Órdenes de hoy',reportes:'Reportes'};
+  document.getElementById('topbar-titulo').textContent=titulos[sec]||sec;
+  if(sec==='ordenes')cargarOrdenesHoy();
+  if(sec==='reportes')cargarReporte();
+};
+
+// ── DASHBOARD ──
+async function cargarDashboard(){
+  if(unsubOrdenes)unsubOrdenes();
+  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
+  unsubOrdenes=onSnapshot(q,snap=>{
+    const ordenes=[];
+    snap.forEach(d=>ordenes.push({id:d.id,...d.data()}));
+    const preordenes=ordenes.filter(o=>o.hora_preorden);
+    const total=ordenes.reduce((s,o)=>s+o.cargo,0);
+    document.getElementById('m-ordenes').textContent=ordenes.length;
+    document.getElementById('m-preordenes').textContent=preordenes.length;
+    document.getElementById('m-recaudado').textContent='$'+total;
+    document.getElementById('loading-dashboard').style.display='none';
+    const hora=new Date();
+    document.getElementById('dashboard-hora').textContent='Actualizado '+hora.getHours()+':'+String(hora.getMinutes()).padStart(2,'0');
+    const tbody=document.getElementById('tabla-dashboard');
+    if(!ordenes.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes por el momento</td></tr>'; return; }
+    tbody.innerHTML=ordenes.map(o=>`
+      <tr>
+        <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
+        <td style="max-width:200px;font-size:.78rem">${(o.platillos||[]).join(', ')||'—'}</td>
+        <td style="font-size:.78rem;color:var(--naranja)">${(o.extras||[]).map(e=>e.nombre).join(', ')||'—'}</td>
+        <td>${o.hora_preorden?'<span class="badge badge-c">⏰ '+o.hora_preorden+'</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
+        <td style="font-size:.78rem;color:var(--g2)">${o.creado_en?.toDate?fmtHora(o.creado_en.toDate()):'—'}</td>
+        <td style="font-weight:700">$${o.cargo}</td>
+        <td>${o.escaneado?'<span class="badge badge-v">Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}</td>
+      </tr>`).join('');
+  });
+  // Empleados count
+  const empSnap=await getDocs(collection(db,'empleados'));
+  document.getElementById('m-empleados').textContent=empSnap.size;
+}
+
+function fmtHora(d){ return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'); }
+
+// ── EMPLEADOS ──
+async function cargarEmpleados(){
+  if(unsubEmpleados)unsubEmpleados();
+  unsubEmpleados=onSnapshot(collection(db,'empleados'),snap=>{
+    document.getElementById('loading-emp').style.display='none';
+    const tbody=document.getElementById('tabla-empleados');
+    if(snap.empty){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--g3)">Sin empleados registrados</td></tr>'; return; }
+    tbody.innerHTML='';
+    snap.forEach(d=>{
+      const e=d.data();
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td style="font-weight:600">${e.nombre||'—'}</td>
+        <td>${e.email||'—'}</td>
+        <td><span class="badge ${e.rol==='admin'?'badge-c':e.rol==='chef'?'badge-r':'badge-g'}">${e.rol||'empleado'}</span></td>
+        <td><span class="badge ${e.activo!==false?'badge-v':'badge-r'}">${e.activo!==false?'Activo':'Inactivo'}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="toggleActivo('${d.id}',${e.activo!==false})">${e.activo!==false?'Desactivar':'Activar'}</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+window.toggleActivo=async function(uid,activo){
+  await updateDoc(doc(db,'empleados',uid),{activo:!activo});
+};
+
+// ── MODAL EMPLEADO ──
+window.mostrarModalEmpleado=function(){
+  document.getElementById('emp-nombre').value='';
+  document.getElementById('emp-email').value='';
+  document.getElementById('emp-pass').value='';
+  document.getElementById('emp-rol').value='empleado';
+  document.getElementById('emp-msg').className='msg';
+  document.getElementById('emp-msg').style.display='none';
+  document.getElementById('modal-emp').style.display='flex';
+};
+window.cerrarModalEmp=function(){ document.getElementById('modal-emp').style.display='none'; };
+
+document.getElementById('btn-guardar-emp').addEventListener('click', async()=>{
+  const nombre=document.getElementById('emp-nombre').value.trim();
+  const email=document.getElementById('emp-email').value.trim();
+  const pass=document.getElementById('emp-pass').value;
+  const rol=document.getElementById('emp-rol').value;
+  const msg=document.getElementById('emp-msg');
+  if(!nombre||!email||!pass){ msg.textContent='Completa todos los campos'; msg.className='msg err'; return; }
+  document.getElementById('btn-guardar-emp').textContent='Guardando...';
+  try{
+    // Crear auth user con segunda instancia para no cerrar sesión del admin
+    const secApp=initializeApp(cfg,'secondary'+Date.now());
+    const secAuth=getAuth(secApp);
+    const cred=await createUserWithEmailAndPassword(secAuth,email,pass);
+    await setDoc(doc(db,'empleados',cred.user.uid),{nombre,email,rol,activo:true,creado_en:serverTimestamp()});
+    await signOut(secAuth);
+    msg.textContent='✓ Empleado creado correctamente'; msg.className='msg ok';
+    setTimeout(()=>{ cerrarModalEmp(); },1500);
+  }catch(e){ msg.textContent='Error: '+e.message; msg.className='msg err'; }
+  document.getElementById('btn-guardar-emp').textContent='Guardar';
+});
+
+// ── CSV IMPORT ──
+const csvInput=document.getElementById('csv-input');
+const dropArea=document.getElementById('drop-area');
+
+dropArea.addEventListener('dragover',e=>{ e.preventDefault(); dropArea.classList.add('drag'); });
+dropArea.addEventListener('dragleave',()=>dropArea.classList.remove('drag'));
+dropArea.addEventListener('drop',e=>{ e.preventDefault(); dropArea.classList.remove('drag'); procesarCSV(e.dataTransfer.files[0]); });
+csvInput.addEventListener('change',()=>{ if(csvInput.files[0]) procesarCSV(csvInput.files[0]); });
+
+function procesarCSV(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    const headers=lines[0].split(',').map(h=>h.trim().toLowerCase());
+    csvData=lines.slice(1).map(line=>{
+      const vals=line.split(',').map(v=>v.trim());
+      const obj={};
+      headers.forEach((h,i)=>obj[h]=vals[i]||'');
+      return obj;
+    }).filter(r=>r.email&&r.nombre);
+    document.getElementById('csv-info').textContent=`${csvData.length} empleados listos para importar`;
+    document.getElementById('csv-preview').style.display='block';
+    document.getElementById('csv-msg').className='msg';
+    document.getElementById('csv-msg').style.display='none';
+  };
+  reader.readAsText(file);
+}
+
+window.cancelarCSV=function(){ csvData=[]; document.getElementById('csv-preview').style.display='none'; csvInput.value=''; };
+
+document.getElementById('btn-importar').addEventListener('click', async()=>{
+  if(!csvData.length)return;
+  document.getElementById('btn-importar').textContent='Importando...';
+  document.getElementById('progreso-wrap').style.display='block';
+  const msg=document.getElementById('csv-msg');
+  let ok=0,err=0;
+  for(let i=0;i<csvData.length;i++){
+    const r=csvData[i];
+    try{
+      const secApp=initializeApp(cfg,'csv'+Date.now()+i);
+      const secAuth=getAuth(secApp);
+      const cred=await createUserWithEmailAndPassword(secAuth,r.email,r.password||'BuenFruto2025');
+      await setDoc(doc(db,'empleados',cred.user.uid),{nombre:r.nombre,email:r.email,rol:'empleado',activo:true,creado_en:serverTimestamp()});
+      await signOut(secAuth);
+      ok++;
+    }catch{ err++; }
+    document.getElementById('progreso-bar').style.width=((i+1)/csvData.length*100)+'%';
+  }
+  msg.textContent=`✓ ${ok} empleados importados${err?` · ${err} errores`:''}`;
+  msg.className=err?'msg err':'msg ok';
+  document.getElementById('btn-importar').textContent='Importar empleados';
+  csvData=[];
+  document.getElementById('csv-preview').style.display='none';
+  csvInput.value='';
+});
+
+// ── EDITOR DE MENÚS ──
+async function initMenuEditor(){
+  const dias=getDias();
+  const selector=document.getElementById('dia-selector');
+  selector.innerHTML='';
+  const menus={};
+  for(const f of dias){
+    const snap=await getDoc(doc(db,'menus',f));
+    menus[f]=snap.exists()?snap.data():null;
+  }
+  dias.forEach((f,i)=>{
+    const d=new Date(f+'T12:00:00');
+    const tiene=!!menus[f];
+    const pill=document.createElement('div');
+    pill.className='dia-pill'+(tiene?' tiene':'');
+    pill.textContent=DS[d.getDay()]+' '+d.getDate();
+    if(f===hoy())pill.textContent+=' (hoy)';
+    pill.addEventListener('click',()=>{
+      document.querySelectorAll('.dia-pill').forEach(p=>p.classList.remove('on'));
+      pill.classList.add('on');
+      diaMenuSel=f;
+      renderMenuEditor(f,menus[f]);
+    });
+    selector.appendChild(pill);
+  });
+}
+
+function renderMenuEditor(fecha,menu){
+  platillosBuf=menu?.platillos?.slice()||[];
+  extrasList=menu?.extras?.slice()||[];
+  document.getElementById('menu-editor-titulo').textContent=fmtF(fecha);
+  document.getElementById('menu-editor-badge').textContent=menu?'Con menú':'Sin menú';
+  document.getElementById('menu-editor-badge').className='badge '+(menu?'badge-v':'badge-g');
+  document.getElementById('menu-editor-body').innerHTML=`
+    <div class="form-grid">
+      <div class="campo span-2">
+        <label>Nombre del buffet</label>
+        <input type="text" id="menu-nombre" placeholder="Ej: Buffet mediterráneo" value="${menu?.nombre||''}"/>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Platillos del buffet</label>
+      <div class="tags-wrap" id="tags-platillos"></div>
+      <div class="tag-input-row">
+        <input type="text" class="tag-input" id="inp-platillo" placeholder="Agregar platillo y presiona Enter"/>
+        <button class="btn btn-v btn-sm" onclick="agregarPlatillo()">Agregar</button>
+      </div>
+    </div>
+    <div class="campo">
+      <label>Extras con costo adicional</label>
+      <div class="tags-wrap" id="tags-extras"></div>
+      <div class="tag-input-row">
+        <input type="text" class="tag-input" id="inp-extra-nom" placeholder="Nombre del extra"/>
+        <input type="number" class="tag-input" id="inp-extra-precio" placeholder="$" style="max-width:80px"/>
+        <button class="btn btn-outline btn-sm" onclick="agregarExtra()">Agregar</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;margin-top:.5rem">
+      <button class="btn btn-v" onclick="guardarMenu()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar menú
+      </button>
+      ${menu?`<button class="btn btn-danger btn-sm" onclick="borrarMenu()">Borrar menú</button>`:''}
+    </div>
+    <div class="msg" id="menu-msg"></div>`;
+  document.getElementById('inp-platillo').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agregarPlatillo(); } });
+  renderTags();
+}
+
+function renderTags(){
+  const tw=document.getElementById('tags-platillos');
+  if(!tw)return;
+  tw.innerHTML=platillosBuf.map((p,i)=>`<span class="tag">${p}<span class="tag-x" onclick="quitarPlatillo(${i})">×</span></span>`).join('');
+  const te=document.getElementById('tags-extras');
+  te.innerHTML=extrasList.map((e,i)=>`<span class="tag naranja">${e.nombre} $${e.precio}<span class="tag-x" onclick="quitarExtra(${i})">×</span></span>`).join('');
+}
+
+window.agregarPlatillo=function(){
+  const v=document.getElementById('inp-platillo').value.trim();
+  if(!v)return;
+  platillosBuf.push(v);
+  document.getElementById('inp-platillo').value='';
+  renderTags();
+};
+window.quitarPlatillo=function(i){ platillosBuf.splice(i,1); renderTags(); };
+window.agregarExtra=function(){
+  const n=document.getElementById('inp-extra-nom').value.trim();
+  const p=parseFloat(document.getElementById('inp-extra-precio').value);
+  if(!n||!p)return;
+  extrasList.push({nombre:n,precio:p});
+  document.getElementById('inp-extra-nom').value='';
+  document.getElementById('inp-extra-precio').value='';
+  renderTags();
+};
+window.quitarExtra=function(i){ extrasList.splice(i,1); renderTags(); };
+
+window.guardarMenu=async function(){
+  const nombre=document.getElementById('menu-nombre').value.trim();
+  const msg=document.getElementById('menu-msg');
+  if(!nombre||!platillosBuf.length){ msg.textContent='Agrega nombre y al menos un platillo'; msg.className='msg err'; return; }
+  try{
+    await setDoc(doc(db,'menus',diaMenuSel),{nombre,platillos:platillosBuf,extras:extrasList,actualizado_en:serverTimestamp()});
+    msg.textContent='✓ Menú guardado'; msg.className='msg ok';
+    await initMenuEditor();
+    document.querySelectorAll('.dia-pill').forEach(p=>{ if(p.textContent.includes(new Date(diaMenuSel+'T12:00:00').getDate()))p.classList.add('on'); });
+  }catch(e){ msg.textContent='Error: '+e.message; msg.className='msg err'; }
+};
+
+window.borrarMenu=async function(){
+  if(!confirm('¿Borrar el menú de este día?'))return;
+  const {deleteDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+  await deleteDoc(doc(db,'menus',diaMenuSel));
+  await initMenuEditor();
+};
+
+// ── ÓRDENES HOY ──
+async function cargarOrdenesHoy(){
+  document.getElementById('loading-ordenes').style.display='block';
+  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()),orderBy('creado_en','asc'));
+  const snap=await getDocs(q);
+  document.getElementById('loading-ordenes').style.display='none';
+  const tbody=document.getElementById('tabla-ordenes');
+  if(snap.empty){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes hoy</td></tr>'; return; }
+  tbody.innerHTML='';
+  snap.forEach(d=>{
+    const o=d.data();
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
+      <td style="font-size:.78rem;max-width:180px">${(o.platillos||[]).join(', ')||'—'}</td>
+      <td style="font-size:.78rem;color:var(--naranja)">${(o.extras||[]).map(e=>e.nombre).join(', ')||'—'}</td>
+      <td>${o.hora_preorden?'<span class="badge badge-c">Pre-orden</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
+      <td>${o.hora_preorden||'—'}</td>
+      <td style="font-weight:700">$${o.cargo}</td>
+      <td>${o.escaneado?'<span class="badge badge-v">✓ Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── REPORTE ──
+async function cargarReporte(){
+  document.getElementById('loading-reporte').style.display='flex';
+  const lunes=getDias()[0];
+  const q=query(collection(db,'ordenes'),where('fecha','>=',lunes),orderBy('fecha'));
+  const snap=await getDocs(q);
+  document.getElementById('loading-reporte').style.display='none';
+  const resumen={};
+  snap.forEach(d=>{
+    const o=d.data();
+    const uid=o.empleado_uid;
+    if(!resumen[uid]) resumen[uid]={nombre:o.empleado_nombre,comidas:0,cargo_emp:0,cargo_emp2:0};
+    resumen[uid].comidas++;
+    resumen[uid].cargo_emp+=o.cargo;
+    resumen[uid].cargo_emp2+=45; // subsidio empresa siempre $45
+  });
+  const tbody=document.getElementById('tabla-reporte');
+  const rows=Object.values(resumen);
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--g3)">Sin datos esta semana</td></tr>'; return; }
+  tbody.innerHTML=rows.map(r=>`
+    <tr>
+      <td style="font-weight:600">${r.nombre||'—'}</td>
+      <td>${r.comidas}</td>
+      <td style="font-weight:700;color:var(--c)">$${r.cargo_emp}</td>
+      <td style="color:var(--v)">$${r.cargo_emp2}</td>
+      <td style="font-weight:800">$${r.cargo_emp+r.cargo_emp2}</td>
+    </tr>`).join('');
+  window._reporteData=rows;
+}
+
+window.exportarCSV=function(){
+  if(!window._reporteData?.length)return;
+  const headers=['Empleado','Comidas','Cargo empleado','Cargo empresa','Total'];
+  const rows=window._reporteData.map(r=>[r.nombre,r.comidas,'$'+r.cargo_emp,'$'+r.cargo_emp2,'$'+(r.cargo_emp+r.cargo_emp2)]);
+  const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='reporte_semana_'+getDias()[0]+'.csv'; a.click();
+};
+</script>
+</body>
+</html>
