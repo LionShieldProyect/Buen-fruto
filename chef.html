@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#2D5016"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Buen Fruto — Cocina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --v:#2D5016;--v2:#234010;--vl:#EBF2E3;--vl2:#F4F8EE;
+  --c:#4A1942;--cl:#F5EFF4;
+  --crema:#F7F3EE;--w:#FFFFFF;
+  --negro:#1C1C1E;--g1:#48484A;--g2:#8E8E93;--g3:#C7C7CC;
+  --borde:#E8E2DA;--borde2:#F0EBE3;
+  --naranja:#C65E00;--naranjal:#FFF3E0;
+  --shadow:0 2px 8px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.05);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;background:var(--crema);color:var(--negro);-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT PRINCIPAL ── */
+.layout{display:flex;flex-direction:column;height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{
+  height:64px;background:var(--v);
+  padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.topbar-left{display:flex;align-items:center;gap:.75rem}
+.topbar-logo{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  border:1.5px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.topbar-brand{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.3rem;font-weight:700;color:var(--w);
+  letter-spacing:-.3px;
+}
+.topbar-divider{
+  width:1px;height:20px;background:rgba(255,255,255,.2);margin:0 .5rem;
+}
+.topbar-seccion{
+  font-size:.8rem;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:rgba(255,255,255,.6);
+}
+.topbar-right{display:flex;align-items:center;gap:1rem}
+.topbar-hora{
+  font-size:1.1rem;font-weight:700;color:var(--w);
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;
+}
+.topbar-fecha{font-size:.75rem;color:rgba(255,255,255,.55);text-align:right}
+.btn-salir{
+  padding:.4rem 1rem;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;color:var(--w);
+  font-family:'Inter',sans-serif;font-size:.75rem;font-weight:600;
+  cursor:pointer;letter-spacing:.03em;
+  transition:background .15s;
+}
+.btn-salir:hover{background:rgba(255,255,255,.2)}
+
+/* ── BARRA DE ESTADO ── */
+.statusbar{
+  height:48px;
+  background:var(--w);
+  border-bottom:1px solid var(--borde2);
+  padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.status-left{display:flex;align-items:center;gap:1.5rem}
+.status-item{display:flex;align-items:center;gap:.4rem;font-size:.78rem}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.verde{background:var(--v)}
+.status-dot.gris{background:var(--g3)}
+.status-dot.naranja{background:var(--naranja)}
+.status-label{color:var(--g2)}
+.status-val{font-weight:700;color:var(--negro)}
+.status-right{font-size:.75rem;color:var(--g3)}
+
+/* ── GRID PRINCIPAL ── */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:1.25rem;
+  padding:1.25rem 2rem;
+  flex:1;
+  overflow-y:auto;
+  align-content:start;
+}
+
+/* ── ORDEN CARD ── */
+.orden-card{
+  background:var(--w);border-radius:16px;
+  border:2px solid var(--borde2);
+  box-shadow:var(--shadow);
+  display:flex;flex-direction:column;
+  transition:all .25s;
+  overflow:hidden;
+}
+.orden-card.activa{
+  border-color:var(--v);
+  box-shadow:0 4px 24px rgba(45,80,22,.18);
+  animation:pulse 2.5s ease-in-out infinite;
+}
+.orden-card.bloqueada{
+  opacity:.45;
+  filter:grayscale(.3);
+}
+
+@keyframes pulse{
+  0%,100%{box-shadow:0 4px 24px rgba(45,80,22,.18)}
+  50%{box-shadow:0 4px 32px rgba(45,80,22,.35)}
+}
+
+/* HEADER CARD */
+.card-head{
+  background:var(--v);
+  padding:.85rem 1.1rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.orden-card.bloqueada .card-head{background:var(--g2)}
+.card-num-wrap{display:flex;align-items:center;gap:.6rem}
+.card-num{
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,.2);
+  color:var(--w);font-size:.82rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.card-empleado{
+  font-size:.95rem;font-weight:700;color:var(--w);
+}
+.card-tiempo{font-size:.7rem;color:rgba(255,255,255,.65);margin-top:.1rem}
+.card-badge{
+  font-size:.65rem;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;padding:.2rem .6rem;
+  border-radius:12px;
+}
+.card-badge.activa{background:rgba(255,255,255,.2);color:var(--w)}
+.card-badge.espera{background:rgba(255,255,255,.12);color:rgba(255,255,255,.7)}
+
+/* BODY CARD */
+.card-body{padding:1rem 1.1rem;flex:1}
+.card-sec{
+  font-size:.62rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--g3);margin-bottom:.5rem;
+}
+.platillo{
+  display:flex;align-items:center;gap:.55rem;
+  padding:.4rem 0;border-bottom:1px solid var(--borde2);
+  font-size:.88rem;color:var(--negro);font-weight:500;
+}
+.platillo:last-child{border-bottom:none}
+.platillo-dot{width:6px;height:6px;border-radius:50%;background:var(--v);flex-shrink:0}
+.orden-card.bloqueada .platillo-dot{background:var(--g3)}
+.extra-tag{
+  margin-left:auto;font-size:.65rem;font-weight:700;
+  background:var(--naranjal);color:var(--naranja);
+  padding:.12rem .45rem;border-radius:5px;flex-shrink:0;
+}
+
+/* TIMER BAR */
+.timer-bar{
+  padding:.55rem 1.1rem;
+  background:var(--vl2);
+  border-top:1px solid var(--borde2);
+  font-size:.75rem;font-weight:600;color:var(--v);
+  display:flex;align-items:center;gap:.4rem;
+}
+.orden-card.bloqueada .timer-bar{background:#F5F5F7;color:var(--g2)}
+
+/* FOOTER CARD */
+.card-foot{padding:.9rem 1.1rem;border-top:1px solid var(--borde2)}
+.btn-lista{
+  width:100%;padding:.85rem;
+  background:var(--v);color:var(--w);
+  border:none;border-radius:10px;
+  font-family:'Inter',sans-serif;
+  font-size:.95rem;font-weight:700;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:.5rem;
+  transition:background .15s,transform .1s;
+}
+.btn-lista:active{background:var(--v2);transform:scale(.98)}
+.btn-lista:hover{background:var(--v2)}
+
+/* EMPTY STATE */
+.empty-full{
+  grid-column:1/-1;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:5rem 2rem;text-align:center;
+}
+.empty-icon{
+  width:80px;height:80px;border-radius:50%;
+  background:var(--vl);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:1.5rem;
+}
+.empty-titulo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.75rem;font-weight:700;color:var(--negro);
+  margin-bottom:.5rem;
+}
+.empty-sub{font-size:.9rem;color:var(--g2);max-width:360px;line-height:1.6}
+
+/* NOTIFICACIÓN TOAST */
+.toast{
+  position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);
+  background:var(--negro);color:var(--w);
+  padding:.75rem 1.5rem;border-radius:24px;
+  font-size:.88rem;font-weight:600;
+  z-index:500;opacity:0;pointer-events:none;
+  transition:opacity .3s,transform .3s;
+  transform:translateX(-50%) translateY(10px);
+  white-space:nowrap;
+  box-shadow:0 8px 24px rgba(0,0,0,.25);
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">
+        <svg viewBox="0 0 44 44" width="20" height="20" fill="none">
+          <ellipse cx="19" cy="29" rx="7" ry="9" fill="rgba(255,255,255,.9)"/>
+          <ellipse cx="29" cy="30" rx="6" ry="8" fill="rgba(255,255,255,.55)"/>
+          <path d="M19 20 Q20 9 27 7 Q25 16 29 22" stroke="rgba(255,255,255,.7)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="topbar-brand">Buen Fruto</span>
+      <div class="topbar-divider"></div>
+      <span class="topbar-seccion">Cocina</span>
+    </div>
+    <div class="topbar-right">
+      <div style="text-align:right">
+        <div class="topbar-hora" id="reloj">--:--</div>
+        <div class="topbar-fecha" id="fecha-top">—</div>
+      </div>
+      <button class="btn-salir" onclick="window.location.href='index.html'">Salir</button>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="status-left">
+      <div class="status-item">
+        <div class="status-dot verde" id="dot-activa"></div>
+        <span class="status-label">Preparando</span>
+        <span class="status-val" id="cnt-activa">0</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot gris"></div>
+        <span class="status-label">En espera</span>
+        <span class="status-val" id="cnt-espera">0</span>
+      </div>
+      <div class="status-item">
+        <div class="status-dot naranja"></div>
+        <span class="status-label">Completadas hoy</span>
+        <span class="status-val" id="cnt-listas">0</span>
+      </div>
+    </div>
+    <div class="status-right" id="status-right">Ventana de servicio: 2:00 pm – 4:30 pm</div>
+  </div>
+
+  <!-- GRID ÓRDENES -->
+  <div class="grid" id="grid"></div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+var DS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+var MS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function actualizarReloj(){
+  var d=new Date(),h=d.getHours(),m=d.getMinutes();
+  document.getElementById('reloj').textContent=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  document.getElementById('fecha-top').textContent=DS[d.getDay()]+' '+d.getDate()+' de '+MS[d.getMonth()];
+}
+actualizarReloj();
+setInterval(actualizarReloj,1000);
+
+var cola=[];
+var completadasLista=[];
+var idCounter=1;
+
+var DEMO=[
+  {empleado:'Sebastian de Villasante',platillos:['Ensalada mixta','Sopa de lima','Pollo en mole negro'],extras:[],preorden:false},
+  {empleado:'Carlos Ramirez',platillos:['Ensalada mixta','Arroz rojo','Agua de jamaica'],extras:['Chile en nogada'],preorden:true,hora:'3:00 pm'},
+  {empleado:'Maria Fernanda Solis',platillos:['Sopa de lima','Pollo en mole negro'],extras:['Flan napolitano'],preorden:false},
+  {empleado:'Roberto Herrera',platillos:['Ensalada mixta','Agua de jamaica'],extras:[],preorden:true,hora:'3:30 pm'},
+  {empleado:'Alejandra Gomez',platillos:['Buffet completo'],extras:['Agua fresca 1L'],preorden:false},
+];
+var dIdx=0;
+
+function nuevaOrden(){
+  if(dIdx>=DEMO.length)return;
+  var p=DEMO[dIdx++];
+  cola.push({id:idCounter++,empleado:p.empleado,platillos:p.platillos,extras:p.extras,preorden:p.preorden,hora:p.hora||null,ts:Date.now()});
+  toast((p.preorden?'Pre-orden':'Nueva orden')+' — '+p.empleado.split(' ')[0]);
+  render();
+}
+
+setTimeout(nuevaOrden,600);
+setTimeout(nuevaOrden,2800);
+setTimeout(nuevaOrden,5500);
+
+function fmtHoraTs(ts){var d=new Date(ts),h=d.getHours(),m=d.getMinutes();return(h<10?'0':'')+h+':'+(m<10?'0':'')+m;}
+function fmtEspera(ts){var min=Math.floor((Date.now()-ts)/60000);if(min===0)return'Ahora mismo';if(min===1)return'Hace 1 min';return'Hace '+min+' min';}
+function cuentaRegresiva(horaStr){
+  if(!horaStr)return null;
+  var p=horaStr.replace(' pm','').replace(' am','').split(':');
+  var h=parseInt(p[0]),m=parseInt(p[1]||0);
+  if(horaStr.includes('pm')&&h!==12)h+=12;
+  var ahora=new Date(),obj=new Date(ahora.getFullYear(),ahora.getMonth(),ahora.getDate(),h,m,0);
+  var diff=Math.floor((obj-ahora)/60000);
+  if(diff<0)return'Ya paso la hora';
+  if(diff===0)return'Ahora!';
+  if(diff<60)return'Faltan '+diff+' min';
+  return'Faltan '+Math.floor(diff/60)+'h '+( diff%60)+'min';
+}
+
+function render(){
+  var grid=document.getElementById('grid');
+  grid.innerHTML='';
+  var normales=cola.filter(function(o){return!o.preorden});
+  var preords=cola.filter(function(o){return o.preorden});
+  document.getElementById('cnt-activa').textContent=normales.length>0?'1':'0';
+  document.getElementById('cnt-espera').textContent=Math.max(0,normales.length-1)+preords.length;
+  document.getElementById('cnt-listas').textContent=completadasLista.length;
+
+  if(cola.length===0&&completadasLista.length===0){
+    var e=document.createElement('div');e.className='empty-full';
+    e.innerHTML='<div class="empty-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#2D5016" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="empty-titulo">Todo en orden</div><div class="empty-sub">Las ordenes apareceran cuando los empleados escaneen su codigo</div>';
+    grid.appendChild(e);return;
+  }
+
+  cola.forEach(function(o,i){
+    var esActiva=!o.preorden&&normales.length>0&&normales[0].id===o.id;
+    // Normales no-activas se bloquean. Pre-ordenes NUNCA se bloquean.
+    var bloqueada=!o.preorden&&!esActiva;
+    var card=document.createElement('div');
+    card.className='orden-card'+(esActiva?' activa':(bloqueada?' bloqueada':''));
+    if(o.preorden)card.style.cssText+='border:2px solid var(--c)!important;animation:none!important;opacity:1!important;pointer-events:auto!important;filter:none!important';
+
+    var headBg=o.preorden?'var(--c)':'var(--v)';
+    var badge=esActiva
+      ?'<span class="card-badge activa">Preparando</span>'
+      :o.preorden
+        ?'<span class="card-badge" style="background:rgba(255,255,255,.2);color:white">Pre-orden</span>'
+        :'<span class="card-badge espera">#'+(normales.indexOf(o)+1)+' en cola</span>';
+
+    var tiempoTxt=o.preorden?'Lista para las '+o.hora:(esActiva?'Preparando ahora':'En espera');
+
+    var plHTML=o.platillos.map(function(p){return'<div class="platillo"><div class="platillo-dot"></div>'+p+'</div>';}).join('');
+
+    var exHTML='';
+    if(o.extras.length){
+      exHTML='<div style="margin-top:.5rem;background:var(--naranjal);border-radius:8px;padding:.5rem .75rem">'+
+        '<div class="card-sec" style="color:var(--naranja);margin-bottom:.35rem">Extras adicionales</div>'+
+        o.extras.map(function(ex){return'<div class="platillo" style="border-color:rgba(198,94,0,.15)"><div class="platillo-dot" style="background:var(--naranja)"></div><span style="color:var(--naranja);font-weight:600">'+ex+'</span></div>';}).join('')+
+        '</div>';
+    }
+
+    var timerHTML='';
+    if(o.preorden&&o.hora){
+      var cr=cuentaRegresiva(o.hora);
+      var urg=cr&&cr.includes('Faltan')&&parseInt(cr.replace(/[^0-9]/g,''))<15;
+      timerHTML='<div class="timer-bar" style="background:'+(urg?'var(--naranjal)':'var(--cl)')+';color:'+(urg?'var(--naranja)':'var(--c)')+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lista para las <strong>'+o.hora+'</strong> &nbsp;·&nbsp; '+cr+'</div>';
+    }else{
+      timerHTML='<div class="timer-bar"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Llegó '+fmtEspera(o.ts)+'</div>';
+    }
+
+    var footHTML=(esActiva||o.preorden)?'<div class="card-foot"><button class="btn-lista" data-id="'+o.id+'" style="background:'+(o.preorden&&!esActiva?'var(--c)':'var(--v)')+'"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Marcar como lista</button></div>':'';
+
+    card.innerHTML=
+      '<div class="card-head" style="background:'+headBg+'">'+
+        '<div class="card-num-wrap">'+
+          '<div class="card-num">'+(i+1)+'</div>'+
+          '<div><div class="card-empleado">'+o.empleado.split(' ').slice(0,2).join(' ')+'</div>'+
+          '<div class="card-tiempo">'+tiempoTxt+'</div></div>'+
+        '</div>'+badge+
+      '</div>'+
+      '<div class="card-body">'+
+        '<div style="background:var(--vl2);border-radius:8px;padding:.5rem .75rem;margin-bottom:.25rem">'+
+        '<div class="card-sec" style="color:var(--v);margin-bottom:.35rem">Buffet del dia</div>'+plHTML+
+        '</div>'+exHTML+
+      '</div>'+timerHTML+footHTML;
+
+    grid.appendChild(card);
+  });
+
+  // Listeners
+  grid.querySelectorAll('.btn-lista').forEach(function(btn){
+    btn.addEventListener('click',function(){marcarLista(parseInt(btn.dataset.id));});
+  });
+
+  // Historial
+  if(completadasLista.length>0){
+    var sep=document.createElement('div');
+    sep.style.cssText='grid-column:1/-1;display:flex;align-items:center;gap:.75rem;margin-top:.5rem';
+    sep.innerHTML='<div style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--g3);white-space:nowrap">Completadas hoy ('+completadasLista.length+')</div><div style="flex:1;height:1px;background:var(--borde)"></div>';
+    grid.appendChild(sep);
+
+    var hw=document.createElement('div');
+    hw.style.cssText='grid-column:1/-1;display:flex;flex-wrap:wrap;gap:.5rem';
+    completadasLista.slice().reverse().forEach(function(o){
+      var chip=document.createElement('div');
+      chip.style.cssText='background:var(--w);border:1px solid var(--borde2);border-left:3px solid '+(o.preorden?'var(--c)':'var(--v)')+';border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;';
+
+      var plHTML=o.platillos.map(function(p){return'<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem 0;font-size:.78rem;color:var(--g1)"><div style="width:5px;height:5px;border-radius:50%;background:var(--v);flex-shrink:0"></div>'+p+'</div>';}).join('');
+      var exHTML=o.extras.length?o.extras.map(function(e){return'<div style="display:flex;align-items:center;gap:.4rem;padding:.2rem 0;font-size:.78rem;color:var(--naranja);font-weight:600"><div style="width:5px;height:5px;border-radius:50%;background:var(--naranja);flex-shrink:0"></div>'+e+'</div>';}).join(''):'';
+
+      chip.innerHTML=
+        '<div class="chip-head" style="display:flex;align-items:center;gap:.5rem;padding:.55rem .85rem;font-size:.8rem">'+
+          '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="'+(o.preorden?'var(--c)':'var(--v)')+'" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'+
+          '<span style="font-weight:700;color:var(--negro)">'+o.empleado.split(' ').slice(0,2).join(' ')+'</span>'+
+          '<span style="color:var(--g3)">'+fmtHoraTs(o.tsLista)+'</span>'+
+          (o.preorden?'<span style="font-size:.65rem;background:var(--cl);color:var(--c);padding:.1rem .4rem;border-radius:5px;font-weight:700">Pre-orden</span>':'')+
+          '<svg class="chip-arrow" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--g3)" stroke-width="2" stroke-linecap="round" style="margin-left:auto;transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>'+
+        '</div>'+
+        '<div class="chip-detalle" style="display:none;padding:.5rem .85rem .75rem;border-top:1px solid var(--borde2)">'+
+          '<div style="margin-bottom:.25rem">'+plHTML+'</div>'+
+          (exHTML?'<div style="border-top:1px solid var(--borde2);padding-top:.35rem;margin-top:.35rem">'+exHTML+'</div>':'')+
+        '</div>';
+
+      chip.addEventListener('click',function(){
+        var det=chip.querySelector('.chip-detalle');
+        var arrow=chip.querySelector('.chip-arrow');
+        var abierto=det.style.display==='block';
+        det.style.display=abierto?'none':'block';
+        arrow.style.transform=abierto?'':'rotate(180deg)';
+        chip.style.boxShadow=abierto?'':'0 2px 12px rgba(0,0,0,.08)';
+      });
+
+      hw.appendChild(chip);
+    });
+    grid.appendChild(hw);
+  }
+}
+
+function marcarLista(id){
+  var idx=cola.findIndex(function(o){return o.id===id});
+  if(idx===-1)return;
+  var o=cola.splice(idx,1)[0];
+  o.tsLista=Date.now();
+  completadasLista.push(o);
+  toast('Lista — '+o.empleado.split(' ')[0]);
+  render();
+}
+
+function toast(msg){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('on');
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){el.classList.remove('on');},2500);
+}
+
+setInterval(function(){if(cola.length)render();},30000);
+</script>
+</body>
+</html>
