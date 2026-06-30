@@ -380,14 +380,32 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 </div>
 
 <script type="module">
-import {
-  auth, db,
-  signInWithEmailAndPassword, signOut, onAuthStateChanged,
-  doc, getDoc, setDoc, addDoc, updateDoc,
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc,
   collection, query, where, orderBy, onSnapshot, getDocs,
-  serverTimestamp,
-  hoy, fmtFecha, newBarcode, getPerfil
-} from './firebase.js';
+  serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const _app = initializeApp({
+  apiKey: "AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
+  authDomain: "buen-fruto.firebaseapp.com",
+  projectId: "buen-fruto",
+  messagingSenderId: "931992831636",
+  appId: "1:931992831636:web:65ee6652748f6418dc9681"
+});
+const auth = getAuth(_app);
+const db   = getFirestore(_app);
+
+function hoy() { return new Date().toISOString().slice(0,10); }
+function fmtFecha(f) {
+  const DS2=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MS2=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const d=new Date(f+'T12:00:00');
+  return DS2[d.getDay()]+' '+d.getDate()+' de '+MS2[d.getMonth()];
+}
+function newBarcode() { return 'BF-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase(); }
+async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return s.exists()?s.data():null; }
 
 // ── ESTADO ──
 let perfil = null;
