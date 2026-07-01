@@ -879,6 +879,7 @@ async function cargarReporte(){
   const porEmp = {};
   snap.forEach(d=>{
     const o = d.data();
+    if(o.estado === 'cancelado') return; // ignorar canceladas
     if(!porEmp[o.empleado_uid]) porEmp[o.empleado_uid] = { nombre: o.empleado_nombre||'—', iniciales: (o.empleado_nombre||'??').split(' ').map(x=>x[0]).slice(0,2).join(''), dias:[] };
     const extras = (o.extras||[]).map(e=>typeof e==='string'?e:(e.nombre+' $'+e.precio)).join(', ');
     const subsidio = 45;
