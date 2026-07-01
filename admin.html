@@ -381,7 +381,7 @@ input[type=file]{display:none}
         <div class="card">
           <div class="card-body" style="padding:0">
             <div class="tabla-wrap"><table>
-              <thead><tr><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Tipo</th><th>Hora</th><th>Total</th><th>Estado</th></tr></thead>
+              <thead><tr><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Tipo</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
               <tbody id="tabla-ordenes"></tbody>
             </table></div>
             <div class="loading" id="loading-ordenes"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Cargando...</div></div>
@@ -825,30 +825,36 @@ window.borrarMenu=async function(){
 
 // ── ÓRDENES HOY ──
 async function cargarOrdenesHoy(){
-  document.getElementById('loading-ordenes').style.display='block';
-  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
-  const snap=await getDocs(q);
-  // Ordenar en cliente por hora de creación
-  const docs=[];
-  snap.forEach(d=>docs.push({id:d.id,...d.data()}));
-  docs.sort((a,b)=>(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
   document.getElementById('loading-ordenes').style.display='none';
-  const tbody=document.getElementById('tabla-ordenes');
-  if(!docs.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes hoy</td></tr>'; return; }
-  tbody.innerHTML='';
-  docs.forEach(o=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
-      <td style="font-size:.78rem;max-width:180px">${(o.platillos||[]).join(', ')||'—'}</td>
-      <td style="font-size:.78rem;color:var(--naranja)">${(o.extras||[]).map(e=>e.nombre).join(', ')||'—'}</td>
-      <td>${o.hora_preorden?'<span class="badge badge-c">Pre-orden</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
-      <td>${o.hora_preorden||'—'}</td>
-      <td style="font-weight:700">$${o.cargo}</td>
-      <td>${o.escaneado?'<span class="badge badge-v">✓ Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}`;
-    tbody.appendChild(tr);
+  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
+  onSnapshot(q, snap=>{
+    const docs=[];
+    snap.forEach(d=>docs.push({id:d.id,...d.data()}));
+    docs.sort((a,b)=>(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
+    const tbody=document.getElementById('tabla-ordenes');
+    if(!docs.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes hoy</td></tr>'; return; }
+    tbody.innerHTML='';
+    docs.forEach(o=>{
+      const cancelada = o.estado==='cancelado';
+      const tr=document.createElement('tr');
+      tr.style.opacity = cancelada ? '.45' : '1';
+      tr.innerHTML=`
+        <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
+        <td style="font-size:.78rem;max-width:160px">${(o.platillos||[]).join(', ')||'—'}</td>
+        <td style="font-size:.78rem;color:var(--naranja)">${(o.extras||[]).map(e=>e.nombre||e).join(', ')||'—'}</td>
+        <td>${o.hora_preorden?'<span class="badge badge-c">Pre-orden</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
+        <td style="font-weight:700">$${o.cargo}</td>
+        <td>${cancelada?'<span class="badge badge-r">Cancelada</span>':o.estado==='lista'?'<span class="badge badge-v">✓ Lista</span>':o.escaneado?'<span class="badge badge-v">Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}</td>
+        <td>${cancelada?'—':`<button class="btn btn-danger btn-sm" onclick="cancelarOrdenAdmin('${o.id}')">Cancelar</button>`}</td>`;
+      tbody.appendChild(tr);
+    });
   });
 }
+
+window.cancelarOrdenAdmin=async function(id){
+  if(!confirm('¿Cancelar esta orden? El empleado podrá volver a pedir.'))return;
+  await updateDoc(doc(db,'ordenes',id),{estado:'cancelado',escaneado:false,cancelado_en:new Date()});
+};
 
 // ── REPORTE ──
 let _reporteRaw = [];
