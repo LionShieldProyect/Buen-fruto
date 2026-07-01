@@ -392,20 +392,16 @@ input[type=file]{display:none}
       <!-- REPORTES -->
       <div class="seccion" id="sec-reportes">
         <div class="sec-titulo">Reportes</div>
-        <div class="sec-sub">Resumen de consumo y cargos por semana.</div>
+        <div class="sec-sub">Reporte semanal de consumo — desglosado por empleado y día.</div>
         <div class="card">
           <div class="card-head">
-            <span class="card-titulo">Resumen semanal</span>
+            <span class="card-titulo" id="reporte-rango">Semana —</span>
             <button class="btn btn-outline btn-sm" onclick="exportarCSV()">
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV
             </button>
           </div>
-          <div class="card-body" style="padding:0">
-            <div class="tabla-wrap"><table>
-              <thead><tr><th>Empleado / Fecha</th><th>Platillos</th><th>Extras</th><th>Pago empleado</th><th>Subsidio empresa</th><th>Total</th></tr></thead>
-              <tbody id="tabla-reporte"></tbody>
-            </table></div>
-            <div class="loading" id="loading-reporte"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Calculando reporte...</div></div>
+          <div class="card-body" id="reporte-body" style="padding:1.5rem">
+            <div class="loading" id="loading-reporte" style="display:flex"><div class="spinner"></div>&nbsp;Calculando reporte...</div>
           </div>
         </div>
       </div>
@@ -853,14 +849,159 @@ async function cargarOrdenesHoy(){
 
 // ── REPORTE ──
 let _reporteRaw = [];
+const DS_R = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MS_R = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MF_R = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 async function cargarReporte(){
-  document.getElementById('loading-reporte').style.display='flex';
-  const lunes = getDias()[0];
+  const body = document.getElementById('reporte-body');
+  body.innerHTML = '<div class="loading" style="display:flex"><div class="spinner"></div>&nbsp;Calculando reporte...</div>';
+
+  const lunes   = getDias()[0];
   const viernes = getDias()[4];
+  const d0 = new Date(lunes+'T12:00:00'), d4 = new Date(viernes+'T12:00:00');
+  document.getElementById('reporte-rango').textContent =
+    'Semana del '+d0.getDate()+' de '+MS_R[d0.getMonth()]+' al '+d4.getDate()+' de '+MS_R[d4.getMonth()];
+
   const q = query(collection(db,'ordenes'), where('fecha','>=',lunes), where('fecha','<=',viernes), orderBy('fecha'));
   const snap = await getDocs(q);
-  document.getElementById('loading-reporte').style.display='none';
+
+  // Agrupar por empleado
+  const porEmp = {};
+  snap.forEach(d=>{
+    const o = d.data();
+    if(!porEmp[o.empleado_uid]) porEmp[o.empleado_uid] = { nombre: o.empleado_nombre||'—', iniciales: (o.empleado_nombre||'??').split(' ').map(x=>x[0]).slice(0,2).join(''), dias:[] };
+    const extras = (o.extras||[]).map(e=>typeof e==='string'?e:(e.nombre+' $'+e.precio)).join(', ');
+    const subsidio = 45;
+    const pagoEmp = o.cargo;
+    porEmp[o.empleado_uid].dias.push({
+      fecha: o.fecha,
+      platillos: (o.platillos||[]).join(', ')||'—',
+      extras: extras||'—',
+      pago_empleado: pagoEmp,
+      subsidio_empresa: subsidio,
+      total_dia: pagoEmp + subsidio
+    });
+  });
+
+  _reporteRaw = Object.values(porEmp);
+
+  if(!_reporteRaw.length){
+    body.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--g3)">Sin datos esta semana</div>';
+    return;
+  }
+
+  const gtEmp     = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.pago_empleado,0),0);
+  const gtEmpresa = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.subsidio_empresa,0),0);
+  const gtComidas = _reporteRaw.reduce((s,e)=>s+e.dias.length,0);
+  const ahora = new Date();
+
+  const COLORS = ['#1a5c96','#6b3fa0','#0f6e56','#993c1d','#854f0b'];
+  let html = '';
+
+  // Encabezado del reporte
+  html += `
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1.5px solid var(--borde)">
+    <div>
+      <div style="font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.3rem">Buen Fruto — Betel</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--negro)">Reporte semanal de comedor</div>
+      <div style="font-size:.78rem;color:var(--g2);margin-top:.2rem">
+        Semana del ${d0.getDate()} de ${MS_R[d0.getMonth()]} al ${d4.getDate()} de ${MS_R[d4.getMonth()]} &nbsp;·&nbsp;
+        Generado ${DS_R[ahora.getDay()]} ${ahora.getDate()} ${MS_R[ahora.getMonth()]}, ${ahora.getHours()}:${String(ahora.getMinutes()).padStart(2,'0')} ${ahora.getHours()<12?'am':'pm'}
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Total a descontar nómina</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--negro)">$${gtEmp}.00</div>
+      <div style="font-size:.72rem;color:var(--g2);margin-top:.1rem">Subsidio empresa: $${gtEmpresa}.00</div>
+    </div>
+  </div>`;
+
+  // Por empleado
+  _reporteRaw.forEach((emp, ei)=>{
+    const color = COLORS[ei % COLORS.length];
+    const tEmp     = emp.dias.reduce((s,d)=>s+d.pago_empleado,0);
+    const tEmpresa = emp.dias.reduce((s,d)=>s+d.subsidio_empresa,0);
+    const tTotal   = tEmp + tEmpresa;
+    const bg = color+'18';
+
+    html += `
+    <div style="margin-bottom:1.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:${color};flex-shrink:0">${emp.iniciales}</div>
+          <div>
+            <div style="font-size:.88rem;font-weight:700;color:var(--negro)">${emp.nombre}</div>
+            <div style="font-size:.72rem;color:var(--g3)">${emp.dias.length} comida${emp.dias.length!==1?'s':''} esta semana</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.68rem;color:var(--g3)">Descuento nómina</div>
+          <div style="font-size:.95rem;font-weight:800;color:var(--negro)">$${tEmp}.00</div>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+        <thead>
+          <tr style="border-bottom:1.5px solid var(--borde)">
+            <th style="text-align:left;padding:.45rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--g3);background:var(--crema)">Fecha</th>
+            <th style="text-align:left;padding:.45rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--g3);background:var(--crema)">Platillos</th>
+            <th style="text-align:left;padding:.45rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--g3);background:var(--crema)">Extras</th>
+            <th style="text-align:right;padding:.45rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--g3);background:var(--crema)">Empleado</th>
+            <th style="text-align:right;padding:.45rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--g3);background:var(--crema)">Empresa</th>
+            <th style="text-align:right;padding:.45rem .75rem;font-size:.65rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--g3);background:var(--crema)">Total día</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    emp.dias.forEach(d=>{
+      const dt = new Date(d.fecha+'T12:00:00');
+      const fmtDia = DS_R[dt.getDay()]+' '+dt.getDate()+' '+MS_R[dt.getMonth()];
+      html += `
+          <tr style="border-bottom:1px solid var(--borde2)">
+            <td style="padding:.55rem .75rem;color:var(--g2);white-space:nowrap">${fmtDia}</td>
+            <td style="padding:.55rem .75rem;color:var(--negro)">${d.platillos}</td>
+            <td style="padding:.55rem .75rem;color:${d.extras==='—'?'var(--g3)':'var(--naranja)'}">${d.extras}</td>
+            <td style="padding:.55rem .75rem;text-align:right;font-weight:600;color:var(--negro)">$${d.pago_empleado}.00</td>
+            <td style="padding:.55rem .75rem;text-align:right;color:var(--v)">$${d.subsidio_empresa}.00</td>
+            <td style="padding:.55rem .75rem;text-align:right;font-weight:700;color:var(--negro)">$${d.total_dia}.00</td>
+          </tr>`;
+    });
+
+    html += `
+          <tr style="background:var(--crema)">
+            <td colspan="3" style="padding:.55rem .75rem;font-weight:700;font-size:.78rem;color:var(--g2)">Subtotal ${emp.nombre.split(' ')[0]}</td>
+            <td style="padding:.55rem .75rem;text-align:right;font-weight:800;color:var(--negro)">$${tEmp}.00</td>
+            <td style="padding:.55rem .75rem;text-align:right;font-weight:700;color:var(--v)">$${tEmpresa}.00</td>
+            <td style="padding:.55rem .75rem;text-align:right;font-weight:800;color:var(--negro)">$${tTotal}.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+  });
+
+  // Total general
+  html += `
+  <div style="border-top:1.5px solid var(--borde);padding-top:1rem;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:.8rem;color:var(--g2)">${_reporteRaw.length} empleado${_reporteRaw.length!==1?'s':''} &nbsp;·&nbsp; ${gtComidas} comidas totales</div>
+    <div style="display:flex;gap:2rem;text-align:right">
+      <div>
+        <div style="font-size:.68rem;color:var(--g3);margin-bottom:.2rem">Total empleados</div>
+        <div style="font-size:1rem;font-weight:800;color:var(--c)">$${gtEmp}.00</div>
+      </div>
+      <div>
+        <div style="font-size:.68rem;color:var(--g3);margin-bottom:.2rem">Total empresa</div>
+        <div style="font-size:1rem;font-weight:800;color:var(--v)">$${gtEmpresa}.00</div>
+      </div>
+      <div>
+        <div style="font-size:.68rem;color:var(--g3);margin-bottom:.2rem">Gran total</div>
+        <div style="font-size:1.1rem;font-weight:800;color:var(--negro)">$${gtEmp+gtEmpresa}.00</div>
+      </div>
+    </div>
+  </div>`;
+
+  body.innerHTML = html;
+}
 
   // Agrupar por empleado
   const porEmp = {};
@@ -881,67 +1022,6 @@ async function cargarReporte(){
     });
   });
 
-  _reporteRaw = Object.values(porEmp);
-
-  const tbody = document.getElementById('tabla-reporte');
-  if(!_reporteRaw.length){
-    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--g3)">Sin datos esta semana</td></tr>';
-    return;
-  }
-
-  let html = '';
-  _reporteRaw.forEach(emp=>{
-    const totalEmp     = emp.dias.reduce((s,d)=>s+d.pago_empleado,0);
-    const totalEmpresa = emp.dias.reduce((s,d)=>s+d.subsidio_empresa,0);
-    const totalGeneral = totalEmp + totalEmpresa;
-
-    // Fila encabezado del empleado
-    html += `<tr style="background:var(--vl2)">
-      <td colspan="6" style="font-weight:700;font-size:.88rem;padding:.65rem 1rem;color:var(--v)">
-        ${emp.nombre} &nbsp;·&nbsp; ${emp.dias.length} comidas esta semana
-      </td>
-    </tr>`;
-
-    // Filas por día
-    emp.dias.forEach(d=>{
-      const dt = new Date(d.fecha+'T12:00:00');
-      const DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-      const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-      const fmtDia = DS2[dt.getDay()]+' '+dt.getDate()+' de '+MS2[dt.getMonth()];
-      html += `<tr>
-        <td style="padding-left:1.5rem;color:var(--g2);font-size:.8rem">${fmtDia}</td>
-        <td style="font-size:.82rem">${d.platillos}</td>
-        <td style="font-size:.78rem;color:var(--naranja)">${d.extras}</td>
-        <td style="font-weight:600;color:var(--c)">$${d.pago_empleado}</td>
-        <td style="color:var(--v)">$${d.subsidio_empresa}</td>
-        <td style="font-weight:600">$${d.total_dia}</td>
-      </tr>`;
-    });
-
-    // Fila total del empleado
-    html += `<tr style="border-top:2px solid var(--borde);background:var(--crema)">
-      <td colspan="2" style="font-weight:700;font-size:.85rem;padding:.6rem 1rem">Total ${emp.nombre.split(' ')[0]}</td>
-      <td></td>
-      <td style="font-weight:800;color:var(--c)">$${totalEmp}</td>
-      <td style="font-weight:700;color:var(--v)">$${totalEmpresa}</td>
-      <td style="font-weight:800;font-size:.9rem">$${totalGeneral}</td>
-    </tr>
-    <tr><td colspan="6" style="height:12px;background:transparent;border:none"></td></tr>`;
-  });
-
-  // Total general
-  const gtEmp     = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.pago_empleado,0),0);
-  const gtEmpresa = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.subsidio_empresa,0),0);
-  html += `<tr style="background:var(--v);color:white">
-    <td colspan="2" style="font-weight:800;font-size:.9rem;padding:.75rem 1rem;color:white">TOTAL SEMANA — ${_reporteRaw.length} empleados</td>
-    <td></td>
-    <td style="font-weight:800;font-size:.9rem;color:white">$${gtEmp}</td>
-    <td style="font-weight:700;color:rgba(255,255,255,.8)">$${gtEmpresa}</td>
-    <td style="font-weight:800;font-size:1rem;color:white">$${gtEmp+gtEmpresa}</td>
-  </tr>`;
-
-  tbody.innerHTML = html;
-}
 
 window.exportarCSV = function(){
   if(!_reporteRaw.length) return;
