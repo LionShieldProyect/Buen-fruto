@@ -213,19 +213,62 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
 }
 .empty-sub{font-size:.9rem;color:var(--g2);max-width:360px;line-height:1.6}
 
-/* NOTIFICACIÓN TOAST */
-.toast{
-  position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);
-  background:var(--negro);color:var(--w);
-  padding:.75rem 1.5rem;border-radius:24px;
-  font-size:.88rem;font-weight:600;
-  z-index:500;opacity:0;pointer-events:none;
-  transition:opacity .3s,transform .3s;
-  transform:translateX(-50%) translateY(10px);
-  white-space:nowrap;
-  box-shadow:0 8px 24px rgba(0,0,0,.25);
+/* SCANNER INTEGRADO */
+.scanner-indicator{
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.75rem;font-weight:600;
+  color:rgba(255,255,255,.7);
 }
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.scanner-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#4ade80;
+  box-shadow:0 0 6px #4ade80;
+  animation:blink 2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* OVERLAY ESCANEO */
+.scan-overlay{
+  position:fixed;inset:0;z-index:400;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(6px);
+}
+.scan-overlay.on{display:flex}
+.scan-card{
+  background:var(--w);border-radius:24px;
+  padding:2.5rem 2rem;width:90%;max-width:480px;
+  text-align:center;
+  animation:popIn .25s ease;
+}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.scan-icono{
+  width:72px;height:72px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 1.25rem;
+}
+.scan-icono.ok{background:var(--v)}
+.scan-icono.error{background:#C0392B}
+.scan-icono.ya{background:var(--c)}
+.scan-titulo{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.75rem;font-weight:700;margin-bottom:.3rem;
+}
+.scan-nombre{font-size:1.1rem;font-weight:700;color:var(--negro);margin-bottom:.2rem}
+.scan-detalle{font-size:.85rem;color:var(--g2);margin-bottom:1.25rem}
+.scan-pedido{
+  background:var(--crema);border-radius:12px;
+  padding:1rem 1.25rem;text-align:left;margin-bottom:1rem;
+}
+.scan-pedido-titulo{font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.5rem}
+.scan-platillo{font-size:.9rem;color:var(--negro);padding:.2rem 0;display:flex;align-items:center;gap:.5rem}
+.scan-platillo-dot{width:6px;height:6px;border-radius:50%;background:var(--v);flex-shrink:0}
+.scan-platillo-dot.extra{background:var(--naranja)}
+.scan-hora{
+  display:inline-flex;align-items:center;gap:.4rem;
+  background:var(--cl);color:var(--c);
+  padding:.4rem .85rem;border-radius:20px;
+  font-size:.82rem;font-weight:700;margin-top:.5rem;
+}
 </style>
 </head>
 <body>
@@ -246,7 +289,11 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
       <span class="topbar-seccion">Cocina</span>
     </div>
     <div class="topbar-right">
-      <div style="text-align:right">
+      <div class="scanner-indicator">
+        <div class="scanner-dot"></div>
+        Listo para escanear
+      </div>
+      <div style="text-align:right;margin-left:1rem">
         <div class="topbar-hora" id="reloj">--:--</div>
         <div class="topbar-fecha" id="fecha-top">—</div>
       </div>
@@ -258,7 +305,7 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
   <div class="statusbar">
     <div class="status-left">
       <div class="status-item">
-        <div class="status-dot verde" id="dot-activa"></div>
+        <div class="status-dot verde"></div>
         <span class="status-label">Preparando</span>
         <span class="status-val" id="cnt-activa">0</span>
       </div>
@@ -273,22 +320,44 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
         <span class="status-val" id="cnt-listas">0</span>
       </div>
     </div>
-    <div class="status-right" id="status-right">Ventana de servicio: 2:00 pm – 4:30 pm</div>
+    <div class="status-right">Ventana de servicio: 2:00 pm – 4:30 pm</div>
   </div>
 
   <!-- GRID ÓRDENES -->
   <div class="grid" id="grid"></div>
+
+  <!-- INPUT INVISIBLE para el lector Bluetooth -->
+  <input type="text" id="scan-input"
+    style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0"
+    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
 
 </div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- OVERLAY ESCANEO -->
+<div class="scan-overlay" id="scan-overlay">
+  <div class="scan-card">
+    <div class="scan-icono" id="scan-icono">
+      <svg id="scan-svg" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="scan-titulo" id="scan-titulo">—</div>
+    <div class="scan-nombre" id="scan-nombre">—</div>
+    <div class="scan-detalle" id="scan-detalle">—</div>
+    <div class="scan-pedido" id="scan-pedido" style="display:none">
+      <div class="scan-pedido-titulo">Pedido</div>
+      <div id="scan-platillos"></div>
+      <div id="scan-hora-wrap"></div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, collection, query, where, orderBy, onSnapshot, updateDoc, doc }
+import { getFirestore, collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDocs }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const _app = initializeApp({
@@ -319,15 +388,117 @@ setInterval(actualizarReloj,1000);
 let cola = [];
 let completadasLista = [];
 
-// ── AUTH — Login simple para chef ──
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    const email = prompt('Email chef:');
-    const pass  = prompt('Contraseña:');
-    if (email && pass) signInWithEmailAndPassword(auth, email, pass).catch(e => alert('Error: '+e.message));
+// ── SCANNER BLUETOOTH INTEGRADO ──
+// El lector BT actúa como teclado HID — escribe el código y presiona Enter
+const scanInput = document.getElementById('scan-input');
+
+// Mantener el input siempre enfocado
+function mantenerFoco() {
+  if (document.activeElement !== scanInput) scanInput.focus();
+}
+setInterval(mantenerFoco, 500);
+document.addEventListener('click', () => setTimeout(mantenerFoco, 100));
+scanInput.focus();
+
+let scanBuffer = '';
+let scanTimer = null;
+
+scanInput.addEventListener('input', () => {
+  scanBuffer = scanInput.value.toUpperCase().trim();
+  clearTimeout(scanTimer);
+  // Si el lector manda Enter o si hay suficientes chars, procesar
+  scanTimer = setTimeout(() => {
+    if (scanBuffer.length > 5) procesarScan(scanBuffer);
+    scanBuffer = '';
+    scanInput.value = '';
+  }, 150);
+});
+
+scanInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    clearTimeout(scanTimer);
+    const code = scanInput.value.toUpperCase().trim();
+    scanInput.value = '';
+    scanBuffer = '';
+    if (code.length > 5) procesarScan(code);
+  }
+});
+
+async function procesarScan(code) {
+  const q = query(
+    collection(db, 'ordenes'),
+    where('barcode', '==', code),
+    where('fecha', '==', hoy())
+  );
+  const snap = await getDocs(q);
+
+  if (snap.empty) {
+    mostrarScanOverlay('error', 'Código inválido', '', 'No se encontró ninguna orden con este código');
     return;
   }
-  suscribirOrdenes();
+
+  const ordenDoc = snap.docs[0];
+  const orden = ordenDoc.data();
+
+  if (orden.escaneado) {
+    mostrarScanOverlay('ya', 'Ya fue escaneado', orden.empleado_nombre || '', 'Este código ya fue usado anteriormente');
+    return;
+  }
+
+  // Marcar como escaneado en Firestore → el listener ya lo pondrá en la cola
+  await updateDoc(doc(db, 'ordenes', ordenDoc.id), {
+    escaneado: true,
+    escaneado_en: new Date()
+  });
+
+  mostrarScanOverlay('ok', '¡Bienvenido!', orden.empleado_nombre || 'Empleado',
+    orden.hora_preorden ? 'Pre-orden: lista a las ' + orden.hora_preorden : 'Pasando a cocina ahora',
+    orden.platillos || [], orden.extras || [], orden.hora_preorden);
+}
+
+function mostrarScanOverlay(tipo, titulo, nombre, detalle, platillos=[], extras=[], hora=null) {
+  const overlay = document.getElementById('scan-overlay');
+  const icono   = document.getElementById('scan-icono');
+  const svg     = document.getElementById('scan-svg');
+  document.getElementById('scan-titulo').textContent  = titulo;
+  document.getElementById('scan-nombre').textContent  = nombre;
+  document.getElementById('scan-detalle').textContent = detalle;
+
+  icono.className = 'scan-icono ' + tipo;
+  if (tipo === 'ok') {
+    svg.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+  } else if (tipo === 'error') {
+    svg.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+  } else {
+    svg.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+  }
+
+  const pedidoWrap = document.getElementById('scan-pedido');
+  if (tipo === 'ok' && (platillos.length || extras.length)) {
+    pedidoWrap.style.display = 'block';
+    document.getElementById('scan-platillos').innerHTML =
+      platillos.map(p => `<div class="scan-platillo"><div class="scan-platillo-dot"></div>${p}</div>`).join('') +
+      (extras||[]).map(e => `<div class="scan-platillo"><div class="scan-platillo-dot extra"></div>${typeof e==='string'?e:(e.nombre+' (+$'+e.precio+')')}</div>`).join('');
+    const horaWrap = document.getElementById('scan-hora-wrap');
+    horaWrap.innerHTML = hora ? `<div class="scan-hora"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lista a las ${hora}</div>` : '';
+  } else {
+    pedidoWrap.style.display = 'none';
+  }
+
+  overlay.classList.add('on');
+  // Cerrar automáticamente
+  clearTimeout(overlay._t);
+  overlay._t = setTimeout(() => {
+    overlay.classList.remove('on');
+    mantenerFoco();
+  }, tipo === 'ok' ? 4000 : 2500);
+}
+
+// Cerrar overlay al tocar
+document.getElementById('scan-overlay').addEventListener('click', () => {
+  document.getElementById('scan-overlay').classList.remove('on');
+  mantenerFoco();
 });
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
