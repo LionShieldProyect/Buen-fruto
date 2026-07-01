@@ -525,7 +525,8 @@ function suscribirOrdenes() {
     const hoyStr = hoy();
     snap.forEach(d => {
       const data = d.data();
-      // Solo guardamos órdenes de hoy en adelante
+      // Ignorar canceladas — permiten al empleado volver a pedir
+      if (data.estado === 'cancelado') return;
       if (data.fecha >= hoyStr) {
         ordenes[data.fecha] = { id: d.id, ...data };
       }
