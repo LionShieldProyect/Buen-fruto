@@ -332,23 +332,30 @@ onAuthStateChanged(auth, user => {
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
 function suscribirOrdenes() {
+  // Query simple: solo por fecha. Filtramos escaneado en cliente para evitar índice compuesto.
   const q = query(
     collection(db, 'ordenes'),
     where('fecha', '==', hoy()),
-    where('escaneado', '==', true),
-    where('estado', '==', 'pagado'),
     orderBy('creado_en', 'asc')
   );
   onSnapshot(q, snap => {
-    const nuevas = [];
-    snap.forEach(d => nuevas.push({ id: d.id, ...d.data() }));
+    const todasHoy = [];
+    snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
+    // Solo las que fueron escaneadas y no están listas aún
+    const nuevasCola = todasHoy.filter(o => o.escaneado && o.estado !== 'lista');
     // Detectar órdenes nuevas para toast
-    nuevas.forEach(o => {
+    nuevasCola.forEach(o => {
       if (!cola.find(x => x.id === o.id) && !completadasLista.find(x => x.id === o.id)) {
-        toast((o.hora_preorden ? 'Pre-orden' : 'Nueva orden') + ' — ' + (o.empleado_nombre||'').split(' ')[0]);
+        toast((o.hora_preorden ? '⏰ Pre-orden' : '🔔 Nueva orden') + ' — ' + (o.empleado_nombre||'').split(' ')[0]);
       }
     });
-    cola = nuevas.filter(o => o.estado !== 'lista');
+    // Actualizar completadas desde Firestore
+    todasHoy.filter(o => o.estado === 'lista').forEach(o => {
+      if (!completadasLista.find(x => x.id === o.id)) {
+        completadasLista.push({ ...o, tsLista: o.lista_en?.toDate?.()?.getTime() || Date.now() });
+      }
+    });
+    cola = nuevasCola;
     render();
   });
 }

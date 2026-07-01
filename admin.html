@@ -441,7 +441,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc,
-  collection, query, where, orderBy, onSnapshot, getDocs, writeBatch,
+  collection, query, where, orderBy, onSnapshot, getDocs, writeBatch, deleteDoc,
   serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const cfg = {
@@ -680,44 +680,80 @@ document.getElementById('btn-importar').addEventListener('click', async()=>{
 });
 
 // ── EDITOR DE MENÚS ──
+// ── EDITOR DE MENÚS ──
+let unsubMenu = null;
+
 async function initMenuEditor(){
-  const dias=getDias();
-  const selector=document.getElementById('dia-selector');
-  selector.innerHTML='';
-  const menus={};
-  for(const f of dias){
-    const snap=await getDoc(doc(db,'menus',f));
-    menus[f]=snap.exists()?snap.data():null;
-  }
-  dias.forEach((f,i)=>{
-    const d=new Date(f+'T12:00:00');
-    const tiene=!!menus[f];
-    const pill=document.createElement('div');
-    pill.className='dia-pill'+(tiene?' tiene':'');
-    pill.textContent=DS[d.getDay()]+' '+d.getDate();
-    if(f===hoy())pill.textContent+=' (hoy)';
-    pill.addEventListener('click',()=>{
-      document.querySelectorAll('.dia-pill').forEach(p=>p.classList.remove('on'));
-      pill.classList.add('on');
-      diaMenuSel=f;
-      renderMenuEditor(f,menus[f]);
+  const selector = document.getElementById('dia-selector');
+  selector.innerHTML = `
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;width:100%">
+      <div>
+        <label style="font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g2);display:block;margin-bottom:.3rem">Seleccionar fecha</label>
+        <input type="date" id="menu-fecha-picker" style="padding:.55rem .85rem;border:1.5px solid var(--borde);border-radius:8px;font-family:'Inter',sans-serif;font-size:.88rem;outline:none;background:var(--crema);color:var(--negro);cursor:pointer" value="${hoy()}"/>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:flex-end">
+        <div>
+          <label style="font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--g2);display:block;margin-bottom:.3rem">Accesos rápidos</label>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap" id="dias-rapidos"></div>
+        </div>
+      </div>
+    </div>`;
+
+  // Días rápidos — semana actual
+  const dias = getDias();
+  const rapidos = document.getElementById('dias-rapidos');
+  dias.forEach(f => {
+    const d = new Date(f+'T12:00:00');
+    const pill = document.createElement('div');
+    pill.className = 'dia-pill' + (f === hoy() ? ' on' : '');
+    pill.textContent = DS[d.getDay()]+' '+d.getDate();
+    if(f===hoy()) pill.textContent += ' (hoy)';
+    pill.addEventListener('click', () => {
+      document.getElementById('menu-fecha-picker').value = f;
+      cargarMenuFecha(f);
     });
-    selector.appendChild(pill);
+    rapidos.appendChild(pill);
+  });
+
+  // Listener en picker de fecha
+  document.getElementById('menu-fecha-picker').addEventListener('change', e => {
+    cargarMenuFecha(e.target.value);
+  });
+
+  // Cargar hoy por default
+  cargarMenuFecha(hoy());
+}
+
+async function cargarMenuFecha(fecha) {
+  diaMenuSel = fecha;
+  document.querySelectorAll('.dia-pill').forEach(p => p.classList.remove('on'));
+  const dias = getDias();
+  document.querySelectorAll('.dia-pill').forEach((p,i) => {
+    if(dias[i] === fecha) p.classList.add('on');
+  });
+  if(document.getElementById('menu-fecha-picker')) document.getElementById('menu-fecha-picker').value = fecha;
+
+  // Unsubscribe anterior si existe
+  if(unsubMenu) unsubMenu();
+
+  // onSnapshot para actualizarse en tiempo real
+  unsubMenu = onSnapshot(doc(db,'menus',fecha), snap => {
+    const menu = snap.exists() ? snap.data() : null;
+    renderMenuEditor(fecha, menu);
   });
 }
 
 function renderMenuEditor(fecha,menu){
   platillosBuf=menu?.platillos?.slice()||[];
   extrasList=menu?.extras?.slice()||[];
-  document.getElementById('menu-editor-titulo').textContent=fmtF(fecha);
+  const d = new Date(fecha+'T12:00:00');
+  document.getElementById('menu-editor-titulo').textContent = DS[d.getDay()]+' '+d.getDate()+' de '+MF[d.getMonth()];
   document.getElementById('menu-editor-badge').textContent=menu?'Con menú':'Sin menú';
   document.getElementById('menu-editor-badge').className='badge '+(menu?'badge-v':'badge-g');
   document.getElementById('menu-editor-body').innerHTML=`
-    <div class="form-grid">
-      <div class="campo span-2">
-        <label>Nombre del buffet</label>
-        <input type="text" id="menu-nombre" placeholder="Ej: Buffet mediterráneo" value="${menu?.nombre||''}"/>
-      </div>
+    <div class="campo">
+      <label>Nombre del buffet</label>
+      <input type="text" id="menu-nombre" placeholder="Ej: Buffet mediterráneo" value="${menu?.nombre||''}"/>
     </div>
     <div class="campo">
       <label>Platillos del buffet</label>
@@ -739,12 +775,13 @@ function renderMenuEditor(fecha,menu){
     <div style="display:flex;gap:.75rem;margin-top:.5rem">
       <button class="btn btn-v" onclick="guardarMenu()">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Guardar menú
+        ${menu ? 'Actualizar menú' : 'Guardar menú'}
       </button>
       ${menu?`<button class="btn btn-danger btn-sm" onclick="borrarMenu()">Borrar menú</button>`:''}
     </div>
     <div class="msg" id="menu-msg"></div>`;
   document.getElementById('inp-platillo').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agregarPlatillo(); } });
+  document.getElementById('inp-extra-precio').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); agregarExtra(); } });
   renderTags();
 }
 
@@ -781,17 +818,13 @@ window.guardarMenu=async function(){
   if(!nombre||!platillosBuf.length){ msg.textContent='Agrega nombre y al menos un platillo'; msg.className='msg err'; return; }
   try{
     await setDoc(doc(db,'menus',diaMenuSel),{nombre,platillos:platillosBuf,extras:extrasList,actualizado_en:serverTimestamp()});
-    msg.textContent='✓ Menú guardado'; msg.className='msg ok';
-    await initMenuEditor();
-    document.querySelectorAll('.dia-pill').forEach(p=>{ if(p.textContent.includes(new Date(diaMenuSel+'T12:00:00').getDate()))p.classList.add('on'); });
+    msg.textContent='✓ Menú guardado — se actualizará en todas las interfaces'; msg.className='msg ok';
   }catch(e){ msg.textContent='Error: '+e.message; msg.className='msg err'; }
 };
 
 window.borrarMenu=async function(){
   if(!confirm('¿Borrar el menú de este día?'))return;
-  const {deleteDoc}=await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
   await deleteDoc(doc(db,'menus',diaMenuSel));
-  await initMenuEditor();
 };
 
 // ── ÓRDENES HOY ──

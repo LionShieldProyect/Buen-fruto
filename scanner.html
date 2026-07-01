@@ -183,28 +183,38 @@ window.escanear=async function(){
   if(!code)return;
   document.getElementById('inp-code').value='';
 
-  // Buscar orden con este barcode
+  // Buscar orden con este barcode para la fecha de hoy
   const q=query(collection(db,'ordenes'),where('barcode','==',code),where('fecha','==',hoy()));
   const snap=await getDocs(q);
 
-  if(snap.empty){ mostrarRes('error','Código inválido','No se encontró ninguna orden con este código','Verifica que el código sea correcto'); return; }
+  if(snap.empty){
+    mostrarRes('error','Código inválido','No se encontró ninguna orden','Verifica que el código sea correcto');
+    agregarHistorial('Código inválido','error');
+    return;
+  }
 
   const ordenDoc=snap.docs[0];
   const orden=ordenDoc.data();
 
-  if(orden.escaneado){ mostrarRes('ya','Ya escaneado','Este código ya fue usado','No puede usarse dos veces el mismo código'); return; }
+  if(orden.escaneado){
+    mostrarRes('ya','Ya fue escaneado',orden.empleado_nombre||'Empleado','Este código ya fue usado — no puede usarse dos veces');
+    agregarHistorial((orden.empleado_nombre||'?')+' (ya escaneado)','error');
+    return;
+  }
 
-  // Marcar como escaneado
-  await updateDoc(doc(db,'ordenes',ordenDoc.id),{ escaneado:true, escaneado_en:new Date() });
+  // Marcar como escaneado → el chef lo recibe en tiempo real
+  await updateDoc(doc(db,'ordenes',ordenDoc.id),{
+    escaneado: true,
+    escaneado_en: new Date()
+  });
 
   // Mostrar éxito
-  const pls=(orden.platillos||[]).concat((orden.extras||[]).map(e=>e.nombre+' (extra)'));
-  mostrarRes('ok','¡Bienvenido!',orden.empleado_nombre||'Empleado','Código válido — pasando a cocina');
+  const pls=(orden.platillos||[]).concat((orden.extras||[]).map(e=>typeof e==='string'?e:e.nombre+' (extra)'));
+  mostrarRes('ok','¡Bienvenido!',orden.empleado_nombre||'Empleado',
+    orden.hora_preorden ? 'Lista a las '+orden.hora_preorden : 'Pasando a cocina ahora');
   document.getElementById('res-pedido').style.display='block';
   document.getElementById('res-platillos').innerHTML=pls.map(p=>`<div class="res-platillo">• ${p}</div>`).join('');
-
-  // Agregar al historial
-  agregarHistorial(orden.empleado_nombre,'ok');
+  agregarHistorial(orden.empleado_nombre||'Empleado','ok');
 };
 
 function mostrarRes(tipo,titulo,nombre,detalle){

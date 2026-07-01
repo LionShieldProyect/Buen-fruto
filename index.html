@@ -530,13 +530,14 @@ function suscribirOrdenes() {
   });
 }
 
-// ── MENÚ HOY ──
+// ── MENÚ HOY EN TIEMPO REAL ──
+let unsubMenuHoy = null;
 async function cargarMenuHoy() {
-  try {
-    const snap = await getDoc(doc(db, 'menus', hoy()));
+  if (unsubMenuHoy) unsubMenuHoy();
+  unsubMenuHoy = onSnapshot(doc(db, 'menus', hoy()), snap => {
     menuHoy = snap.exists() ? snap.data() : null;
-  } catch(e) { menuHoy = null; }
-  renderInicio();
+    renderInicio();
+  });
 }
 
 function renderInicio() {
@@ -757,19 +758,25 @@ async function crearOrden(fecha, horaPreorden) {
   mostrarConf(fecha, bc, cg, horaPreorden ? `Lista a las ${horaPreorden}` : 'Llegas, escaneas — cocina empieza', buf, ext, pls);
 }
 
-// ── MENÚ SEMANAL ──
+// ── MENÚ SEMANAL EN TIEMPO REAL ──
+const unsubMenus = [];
 async function cargarMenuSemana() {
   document.getElementById('menu-det-contenido').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando menús...</div>';
   const dias = getDias();
   const d0 = new Date(dias[0]+'T12:00:00'), d4 = new Date(dias[4]+'T12:00:00');
   document.getElementById('subtitulo-semana').textContent = `${d0.getDate()} de ${MS[d0.getMonth()]} – ${d4.getDate()} de ${MS[d4.getMonth()]}`;
-  menusSemana = [];
-  for (const f of dias) {
-    const snap = await getDoc(doc(db, 'menus', f));
-    menusSemana.push(snap.exists() ? { fecha: f, ...snap.data() } : { fecha: f, nombre: null });
-  }
-  renderDiasTabs();
-  selDia(0);
+  // Cancelar suscripciones anteriores
+  unsubMenus.forEach(u => u());
+  unsubMenus.length = 0;
+  menusSemana = dias.map(f => ({ fecha: f, nombre: null }));
+  dias.forEach((f, i) => {
+    const unsub = onSnapshot(doc(db, 'menus', f), snap => {
+      menusSemana[i] = snap.exists() ? { fecha: f, ...snap.data() } : { fecha: f, nombre: null };
+      renderDiasTabs();
+      if (diaIdx === i) selDia(i);
+    });
+    unsubMenus.push(unsub);
+  });
 }
 window.cargarMenuSemana = cargarMenuSemana;
 
