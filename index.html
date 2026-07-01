@@ -357,7 +357,6 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     <div class="modal-sub">Cocina tendrá tu comida lista a esa hora</div>
     <div class="hora-grid" id="hora-grid"></div>
     <button class="btn-fill" id="btn-conf-hora">Confirmar hora</button>
-    <button class="btn-ghost" id="btn-solo-codigo">Solo el código — escaneo cuando llegue</button>
     <button class="btn-ghost muted" id="btn-cerrar-modal">Cancelar</button>
   </div>
 </div>
@@ -717,8 +716,7 @@ function actuTick(modo, menu) {
   } else {
     const ba = document.getElementById('btn-accion-dia');
     if(ba && !ba.disabled) {
-      const esH = getDias()[diaIdx] === hoy();
-      ba.textContent = (esH ? 'Pedir ahora' : 'Solo el código') + ` — $${cg}.00`;
+      ba.textContent = `Pedir ahora — $${cg}.00`;
     }
   }
 }
@@ -820,11 +818,9 @@ function selDia(i) {
         <div id="items-det"></div>
         <div class="ticket" id="ticket-det"><div id="ticket-det-rows"></div></div>
         <button class="btn-fill" id="btn-accion-dia" style="margin-top:.9rem" ${tieneOrden?'disabled':''}>
-          ${tieneOrden ? '✓ Ya ordenaste este día' : esHoy ? 'Pedir ahora' : 'Solo el código — escaneo cuando llegue'}
+          ${tieneOrden ? '✓ Ya ordenaste este día' : 'Pedir ahora'}
         </button>
-        ${!tieneOrden ? `<button class="btn-ghost" id="btn-accion-hora">
-          ${esHoy ? 'Pre-ordenar para hoy — elige hora' : 'Pre-ordenar con hora — cocina lo prepara'}
-        </button>` : ''}
+        ${!tieneOrden ? `<button class="btn-ghost" id="btn-accion-hora">Pre-ordenar con hora — cocina lo prepara</button>` : ''}
       </div>
     </div>`;
 
@@ -880,7 +876,6 @@ async function procesarOrden(hora) {
 }
 
 document.getElementById('btn-conf-hora').addEventListener('click', async () => { if (!horaModal) { alert('Selecciona una hora'); return; } cerrarModal(); await procesarOrden(horaModal); });
-document.getElementById('btn-solo-codigo').addEventListener('click', async () => { cerrarModal(); await procesarOrden(null); });
 
 // ── CONFIRMACIÓN ──
 function mostrarConf(fecha, bc, cg, desc, buf, ext, pls) {
