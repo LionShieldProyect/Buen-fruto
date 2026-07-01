@@ -914,9 +914,9 @@ async function cargarReporte(){
       </div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Total a descontar nómina</div>
-      <div style="font-size:1.4rem;font-weight:800;color:var(--negro)">$${gtEmp}.00</div>
-      <div style="font-size:.72rem;color:var(--g2);margin-top:.1rem">Subsidio empresa: $${gtEmpresa}.00</div>
+      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Órdenes hoy</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--negro)" id="reporte-ordenes-hoy">—</div>
+      <div style="font-size:.72rem;color:var(--g2);margin-top:.1rem" id="reporte-ordenes-sub">en tiempo real</div>
     </div>
   </div>`;
 
@@ -1004,6 +1004,17 @@ async function cargarReporte(){
   </div>`;
 
   body.innerHTML = html;
+
+  // Listener en tiempo real para órdenes de hoy
+  const qHoy = query(collection(db,'ordenes'), where('fecha','==',hoy()));
+  onSnapshot(qHoy, snapHoy => {
+    const el = document.getElementById('reporte-ordenes-hoy');
+    const sub = document.getElementById('reporte-ordenes-sub');
+    if (el) {
+      el.textContent = snapHoy.size;
+      if (sub) sub.textContent = snapHoy.size === 1 ? '1 comida registrada hoy' : snapHoy.size + ' comidas registradas hoy';
+    }
+  });
 }
 
 window.exportarCSV = function(){
