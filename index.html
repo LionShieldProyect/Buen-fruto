@@ -515,14 +515,21 @@ async function iniciarApp() {
 // ── SUSCRIBIR ÓRDENES EN TIEMPO REAL ──
 function suscribirOrdenes() {
   if (unsubOrdenes) unsubOrdenes();
+  // Query simple por empleado — sin índice compuesto
   const q = query(
     collection(db, 'ordenes'),
-    where('empleado_uid', '==', auth.currentUser.uid),
-    where('fecha', '>=', hoy())
+    where('empleado_uid', '==', auth.currentUser.uid)
   );
   unsubOrdenes = onSnapshot(q, snap => {
     ordenes = {};
-    snap.forEach(d => { ordenes[d.data().fecha] = { id: d.id, ...d.data() }; });
+    const hoyStr = hoy();
+    snap.forEach(d => {
+      const data = d.data();
+      // Solo guardamos órdenes de hoy en adelante
+      if (data.fecha >= hoyStr) {
+        ordenes[data.fecha] = { id: d.id, ...data };
+      }
+    });
     renderInicio();
     if (document.getElementById('t-pedidos').style.display === 'block') renderPedidos();
     renderDiasTabs();
@@ -940,7 +947,7 @@ window.renderPedidos = renderPedidos;
 // ── HISTORIAL ──
 async function cargarHistorial() {
   document.getElementById('hist-lista').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando historial...</div>';
-  const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid), orderBy('fecha', 'desc'));
+  const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid));
   const snap = await getDocs(q);
   const lista = document.getElementById('hist-lista');
   if (snap.empty) { lista.innerHTML = '<div class="empty"><div class="empty-t">Sin comidas registradas</div></div>'; return; }

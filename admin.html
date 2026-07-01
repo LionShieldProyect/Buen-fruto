@@ -826,14 +826,17 @@ window.borrarMenu=async function(){
 // ── ÓRDENES HOY ──
 async function cargarOrdenesHoy(){
   document.getElementById('loading-ordenes').style.display='block';
-  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()),orderBy('creado_en','asc'));
+  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
   const snap=await getDocs(q);
+  // Ordenar en cliente por hora de creación
+  const docs=[];
+  snap.forEach(d=>docs.push({id:d.id,...d.data()}));
+  docs.sort((a,b)=>(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
   document.getElementById('loading-ordenes').style.display='none';
   const tbody=document.getElementById('tabla-ordenes');
-  if(snap.empty){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes hoy</td></tr>'; return; }
+  if(!docs.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes hoy</td></tr>'; return; }
   tbody.innerHTML='';
-  snap.forEach(d=>{
-    const o=d.data();
+  docs.forEach(o=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
