@@ -1003,26 +1003,6 @@ async function cargarReporte(){
   body.innerHTML = html;
 }
 
-  // Agrupar por empleado
-  const porEmp = {};
-  snap.forEach(d=>{
-    const o = d.data();
-    const uid = o.empleado_uid;
-    if(!porEmp[uid]) porEmp[uid] = { nombre: o.empleado_nombre||'—', dias: [] };
-    const subsidio = 45; // empresa siempre paga $45
-    const pagoEmp  = o.cargo; // lo que pagó el empleado (ya descontado subsidio)
-    const extras   = (o.extras||[]).map(e=>typeof e==='string'?e:(e.nombre+' $'+e.precio)).join(', ');
-    porEmp[uid].dias.push({
-      fecha: o.fecha,
-      platillos: (o.platillos||[]).join(', ') || '—',
-      extras: extras || '—',
-      pago_empleado: pagoEmp,
-      subsidio_empresa: subsidio,
-      total_dia: pagoEmp + subsidio
-    });
-  });
-
-
 window.exportarCSV = function(){
   if(!_reporteRaw.length) return;
   const DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
