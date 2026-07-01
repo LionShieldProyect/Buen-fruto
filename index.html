@@ -315,8 +315,19 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
           <div class="pf-nombre" id="pf-nombre">—</div>
           <div class="pf-email" id="pf-email">—</div>
           <div style="margin-top:1.5rem">
-            <div class="pf-row"><span class="l">Empresa</span><span>Buen Fruto</span></div>
+            <div class="pf-row"><span class="l">Empresa</span><span>Betel</span></div>
             <div class="pf-row"><span class="l">Rol</span><span>Empleado</span></div>
+          </div>
+          <div style="margin-top:1.25rem;background:var(--vl2);border:1px solid #C8DEB0;border-radius:12px;padding:1rem 1.1rem">
+            <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.65rem">Asistencia y soporte</div>
+            <a href="tel:5640010343" style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;text-decoration:none;border-bottom:1px solid var(--borde2)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--v)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.83a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.5 16.92z"/></svg>
+              <span style="font-size:.85rem;font-weight:600;color:var(--v)">56 4001 0343</span>
+            </a>
+            <a href="mailto:sdevilla13@icloud.com" style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;text-decoration:none">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--v)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <span style="font-size:.85rem;font-weight:600;color:var(--v)">sdevilla13@icloud.com</span>
+            </a>
           </div>
           <button class="btn-salir" id="btn-salir">Cerrar sesión</button>
         </div>
@@ -530,9 +541,8 @@ function suscribirOrdenes() {
     const hoyStr = hoy();
     snap.forEach(d => {
       const data = d.data();
-      // Ignorar canceladas — permiten al empleado volver a pedir
-      if (data.estado === 'cancelado') return;
       if (data.fecha >= hoyStr) {
+        // Guardamos todas incluidas canceladas — renderPedidos las maneja
         ordenes[data.fecha] = { id: d.id, ...data };
       }
     });
@@ -554,35 +564,37 @@ async function cargarMenuHoy() {
 
 function renderInicio() {
   const cont = document.getElementById('inicio-contenido');
+  // Solo mostrar barcode si hay orden activa (no cancelada)
   const ordenHoy = ordenes[hoy()];
+  const ordenActiva = ordenHoy && ordenHoy.estado !== 'cancelado' ? ordenHoy : null;
 
-  if (ordenHoy) {
-    // Ya tiene orden hoy — mostrar barcode
+  if (ordenActiva) {
+    const o = ordenActiva;
     cont.innerHTML = `
       <div class="bc-card">
         <div class="bc-card-head">
           <span class="bc-card-titulo">Mi comprobante de hoy</span>
-          <span class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:.67rem">${ordenHoy.hora_preorden ? 'Pre-orden · ' + ordenHoy.hora_preorden : 'Listo para escanear'}</span>
+          <span class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:.67rem">${o.hora_preorden ? 'Pre-orden · ' + o.hora_preorden : 'Listo para escanear'}</span>
         </div>
-        ${ordenHoy.hora_preorden ? `<div class="bc-hora" style="display:block">⏰ Tu comida estará lista a las ${ordenHoy.hora_preorden}</div>` : ''}
+        ${o.hora_preorden ? `<div class="bc-hora" style="display:block">⏰ Tu comida estará lista a las ${o.hora_preorden}</div>` : ''}
         <div class="bc-body">
           <div class="bc-box" id="bc-box-hoy">
-            <svg class="bc-svg" id="bc-svg-hoy" viewBox="0 0 280 68" xmlns="http://www.w3.org/2000/svg"></svg>
-            <div class="bc-code">${ordenHoy.barcode}</div>
+            <svg class="bc-svg" id="bc-svg-hoy" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div class="bc-code">${o.barcode}</div>
             <div class="bc-hint">Toca para agrandar</div>
           </div>
           <div style="margin-top:.85rem;background:var(--crema);border-radius:var(--rs);padding:.75rem 1rem">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.4rem">Tu pedido</div>
-            ${(ordenHoy.platillos||[]).map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.15rem 0">• ${p}</div>`).join('')}
-            ${(ordenHoy.extras||[]).map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.15rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')}
+            ${(o.platillos||[]).map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.15rem 0">• ${p}</div>`).join('')}
+            ${(o.extras||[]).map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.15rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')}
           </div>
-          ${ordenHoy.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${ordenHoy.id}')">Usar ahora — escaneo y cocina empieza</button>` : ''}
+          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Usar ahora — escaneo y cocina empieza</button>` : ''}
         </div>
       </div>`;
     setTimeout(() => {
       const svg = document.getElementById('bc-svg-hoy');
-      if (svg) mkBC(ordenHoy.barcode, svg);
-      document.getElementById('bc-box-hoy')?.addEventListener('click', () => agrandarBC(ordenHoy.barcode));
+      if (svg) mkBC(o.barcode, svg);
+      document.getElementById('bc-box-hoy')?.addEventListener('click', () => agrandarBC(o.barcode));
     }, 50);
     return;
   }
@@ -914,36 +926,51 @@ function renderPedidos() {
   lista.innerHTML = '';
   keys.sort().reverse().forEach(fecha => {
     const o = ordenes[fecha];
+    const cancelada = o.estado === 'cancelado';
     const card = document.createElement('div');
     card.className = 'pedido-card';
+    card.style.cssText = cancelada ? 'opacity:.45;border-left-color:var(--g3)' : '';
     card.innerHTML = `
       <div class="pedido-head">
         <span class="pedido-fecha">${fmtFecha(fecha)}</span>
-        <span class="badge ${o.hora_preorden ? 'badge-ciruela' : 'badge-verde'}">${o.hora_preorden ? 'Pre-orden' : 'Al llegar'}</span>
+        ${cancelada
+          ? '<span class="badge badge-gris">Cancelada</span>'
+          : `<span class="badge ${o.hora_preorden ? 'badge-ciruela' : 'badge-verde'}">${o.hora_preorden ? 'Pre-orden' : 'Al llegar'}</span>`}
       </div>
       <div class="pedido-body">
-        <div class="pedido-tipo">${o.hora_preorden ? '⏰ Lista a las ' + o.hora_preorden : '📲 Escaneas al llegar — cocina empieza'}</div>
-        ${o.platillos?.length ? `<div style="margin-bottom:.6rem">${o.platillos.map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.1rem 0">• ${p}</div>`).join('')}${o.extras?.map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.1rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')||''}</div>` : ''}
-        <div class="pedido-bc">
-          <svg viewBox="0 0 280 68" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:63px">${mkBChtml(o.barcode)}</svg>
-          <div class="pedido-bc-code">${o.barcode}</div>
+        <div class="pedido-tipo" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">
+          ${cancelada ? 'Orden cancelada' : o.hora_preorden ? '⏰ Lista a las ' + o.hora_preorden : '📲 Escaneas al llegar — cocina empieza'}
         </div>
+        ${o.platillos?.length ? `<div style="margin-bottom:.6rem">${o.platillos.map(p=>`<div style="font-size:.82rem;color:var(--g${cancelada?'3':'1'});padding:.1rem 0">• ${p}</div>`).join('')}</div>` : ''}
+        ${!cancelada ? `<div class="pedido-bc">
+          <svg id="bc-ped-${fecha}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:63px"></svg>
+          <div class="pedido-bc-code">${o.barcode}</div>
+        </div>` : ''}
       </div>
       <div class="pedido-footer">
-        <span class="pedido-total-lbl">Total pagado</span>
-        <span class="pedido-total-val">$${o.cargo}.00</span>
+        <span class="pedido-total-lbl">${cancelada ? 'No cobrado' : 'Total pagado'}</span>
+        <span class="pedido-total-val" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">$${o.cargo}.00</span>
       </div>`;
-    const btnAg = document.createElement('button');
-    btnAg.className = 'btn-ghost'; btnAg.style.cssText = 'display:block;margin:.5rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem';
-    btnAg.textContent = 'Agrandar código';
-    btnAg.addEventListener('click', () => agrandarBC(o.barcode));
-    card.appendChild(btnAg);
-    if (o.hora_preorden) {
-      const btnU = document.createElement('button');
-      btnU.className = 'btn-fill'; btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
-      btnU.textContent = 'Usar ahora — cancela la hora y cocina empieza';
-      btnU.addEventListener('click', () => updateDoc(doc(db, 'ordenes', o.id), { hora_preorden: null, tipo: 'momento' }));
-      card.appendChild(btnU);
+
+    if (!cancelada) {
+      setTimeout(() => {
+        const svgEl = document.getElementById('bc-ped-'+fecha);
+        if (svgEl) mkBC(o.barcode, svgEl);
+      }, 50);
+      const btnAg = document.createElement('button');
+      btnAg.className = 'btn-ghost';
+      btnAg.style.cssText = 'display:block;margin:.5rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem';
+      btnAg.textContent = 'Agrandar código';
+      btnAg.addEventListener('click', () => agrandarBC(o.barcode));
+      card.appendChild(btnAg);
+      if (o.hora_preorden) {
+        const btnU = document.createElement('button');
+        btnU.className = 'btn-fill';
+        btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
+        btnU.textContent = 'Usar ahora — cancela la hora y cocina empieza';
+        btnU.addEventListener('click', () => updateDoc(doc(db, 'ordenes', o.id), { hora_preorden: null, tipo: 'momento' }));
+        card.appendChild(btnU);
+      }
     }
     lista.appendChild(card);
   });
