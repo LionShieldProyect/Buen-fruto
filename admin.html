@@ -529,7 +529,7 @@ async function cargarDashboard(){
   const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
   unsubOrdenes=onSnapshot(q,snap=>{
     const ordenes=[];
-    snap.forEach(d=>ordenes.push({id:d.id,...d.data()}));
+    snap.forEach(d=>{ if(d.data().estado!=='cancelado') ordenes.push({id:d.id,...d.data()}); });
     const preordenes=ordenes.filter(o=>o.hora_preorden);
     const total=ordenes.reduce((s,o)=>s+o.cargo,0);
     document.getElementById('m-ordenes').textContent=ordenes.length;
@@ -1018,8 +1018,9 @@ async function cargarReporte(){
     const el = document.getElementById('reporte-ordenes-hoy');
     const sub = document.getElementById('reporte-ordenes-sub');
     if (el) {
-      el.textContent = snapHoy.size;
-      if (sub) sub.textContent = snapHoy.size === 1 ? '1 comida registrada hoy' : snapHoy.size + ' comidas registradas hoy';
+      const activas = snapHoy.docs.filter(d => d.data().estado !== 'cancelado').length;
+      el.textContent = activas;
+      if (sub) sub.textContent = activas === 1 ? '1 comida registrada hoy' : activas + ' comidas registradas hoy';
     }
   });
 }
