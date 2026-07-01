@@ -221,6 +221,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .spinner{width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 </head>
 <body>
 
@@ -403,7 +404,10 @@ function fmtFecha(f) {
   const d=new Date(f+'T12:00:00');
   return DS2[d.getDay()]+' '+d.getDate()+' de '+MS2[d.getMonth()];
 }
-function newBarcode() { return 'BF-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase(); }
+function newBarcode() {
+  // Code 128 compatible — solo alfanumérico sin guiones
+  return 'BF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
+}
 async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return s.exists()?s.data():null; }
 
 // ── ESTADO ──
@@ -433,23 +437,24 @@ function irTab(tabId, btn) {
 window.irTab = irTab;
 
 function mkBC(tok, el) {
-  el.innerHTML = '';
-  const bits = [];
-  for (let i = 0; i < tok.length; i++) { const c = tok.charCodeAt(i); for (let b = 7; b >= 0; b--) bits.push((c >> b) & 1); }
-  const bw = 260 / bits.length;
-  bits.forEach((bit, i) => {
-    if (!bit) return;
-    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    r.setAttribute('x', 10 + i * bw); r.setAttribute('y', 5);
-    r.setAttribute('width', Math.max(bw * .82, .7)); r.setAttribute('height', 58);
-    r.setAttribute('fill', '#2D5016'); el.appendChild(r);
-  });
+  try {
+    JsBarcode(el, tok, {
+      format: 'CODE128',
+      width: 2,
+      height: 60,
+      displayValue: false,
+      margin: 8,
+      lineColor: '#2D5016'
+    });
+  } catch(e) { el.innerHTML = ''; }
 }
 function mkBChtml(tok) {
-  const bits = [];
-  for (let i = 0; i < tok.length; i++) { const c = tok.charCodeAt(i); for (let b = 7; b >= 0; b--) bits.push((c >> b) & 1); }
-  const bw = 260 / bits.length;
-  return bits.map((bit, i) => bit ? `<rect x="${10+i*bw}" y="5" width="${Math.max(bw*.82,.7)}" height="58" fill="#2D5016"/>` : '').join('');
+  // Para HTML estático usamos un SVG temporal
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  try {
+    JsBarcode(svg, tok, { format:'CODE128', width:2, height:60, displayValue:false, margin:8, lineColor:'#2D5016' });
+    return svg.innerHTML;
+  } catch(e) { return ''; }
 }
 function calcCargo(buf, ext) { return (buf ? 45 : 0) + ext.reduce((s, e) => s + e.precio, 0); }
 function mkTicketHTML(buf, ext, pls) {
