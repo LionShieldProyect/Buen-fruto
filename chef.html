@@ -442,19 +442,27 @@ async function procesarScan(code) {
   const orden = ordenDoc.data();
 
   if (orden.escaneado) {
-    mostrarScanOverlay('ya', 'Ya fue escaneado', orden.empleado_nombre || '', 'Este código ya fue usado anteriormente');
+    mostrarScanOverlay('ya', 'Ya fue escaneado', orden.empleado_nombre || '', 'Este código ya fue usado');
     return;
   }
 
-  // Marcar como escaneado en Firestore → el listener ya lo pondrá en la cola
+  // Marcar escaneado — sin tocar hora_preorden
+  // Si tiene hora: el chef ya la recibió automáticamente a esa hora, el empleado solo valida su llegada
+  // Si no tiene hora: es pedir ahora, cocina empieza en este momento
   await updateDoc(doc(db, 'ordenes', ordenDoc.id), {
     escaneado: true,
     escaneado_en: new Date()
   });
 
-  mostrarScanOverlay('ok', '¡Bienvenido!', orden.empleado_nombre || 'Empleado',
-    orden.hora_preorden ? 'Pre-orden: lista a las ' + orden.hora_preorden : 'Pasando a cocina ahora',
-    orden.platillos || [], orden.extras || [], orden.hora_preorden);
+  mostrarScanOverlay(
+    'ok',
+    '¡Bienvenido!',
+    orden.empleado_nombre || 'Empleado',
+    orden.hora_preorden ? 'Tu comida está siendo preparada para las ' + orden.hora_preorden : 'Pasando a cocina ahora',
+    orden.platillos || [],
+    orden.extras || [],
+    orden.hora_preorden || null
+  );
 }
 
 function mostrarScanOverlay(tipo, titulo, nombre, detalle, platillos=[], extras=[], hora=null) {
@@ -503,7 +511,6 @@ document.getElementById('scan-overlay').addEventListener('click', () => {
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
 function suscribirOrdenes() {
-  // Query simple: solo por fecha. Filtramos escaneado en cliente para evitar índice compuesto.
   const q = query(
     collection(db, 'ordenes'),
     where('fecha', '==', hoy()),
@@ -512,23 +519,43 @@ function suscribirOrdenes() {
   onSnapshot(q, snap => {
     const todasHoy = [];
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
-    // Solo las que fueron escaneadas y no están listas aún
-    const nuevasCola = todasHoy.filter(o => o.escaneado && o.estado !== 'lista');
+
+    const nuevasCola = todasHoy.filter(o => {
+      if (o.estado === 'lista') return false;
+      // Pedir ahora o código solo: necesita escaneo
+      if (!o.hora_preorden) return o.escaneado;
+      // Pre-orden con hora: aparece automáticamente cuando llega la hora
+      return horaAlcanzada(o.hora_preorden);
+    });
+
     // Detectar órdenes nuevas para toast
     nuevasCola.forEach(o => {
       if (!cola.find(x => x.id === o.id) && !completadasLista.find(x => x.id === o.id)) {
         toast((o.hora_preorden ? '⏰ Pre-orden' : '🔔 Nueva orden') + ' — ' + (o.empleado_nombre||'').split(' ')[0]);
       }
     });
-    // Actualizar completadas desde Firestore
+
+    // Actualizar completadas
     todasHoy.filter(o => o.estado === 'lista').forEach(o => {
       if (!completadasLista.find(x => x.id === o.id)) {
         completadasLista.push({ ...o, tsLista: o.lista_en?.toDate?.()?.getTime() || Date.now() });
       }
     });
+
     cola = nuevasCola;
     render();
   });
+}
+
+// Verificar si la hora de pre-orden ya llegó
+function horaAlcanzada(horaStr) {
+  if (!horaStr) return false;
+  const p = horaStr.replace(' pm','').replace(' am','').split(':');
+  let h = parseInt(p[0]), m = parseInt(p[1]||0);
+  if (horaStr.includes('pm') && h !== 12) h += 12;
+  const ahora = new Date();
+  const obj = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), h, m, 0);
+  return ahora >= obj;
 }
 
 // ── MARCAR LISTA ──
@@ -687,6 +714,8 @@ function toast(msg){
 }
 
 setInterval(()=>{ if(cola.length) render(); }, 30000);
+// Revisar cada minuto si alguna pre-orden llegó a su hora
+setInterval(()=> { if(cola.length || true) suscribirOrdenes(); }, 60000);
 </script>
 
 </body>
