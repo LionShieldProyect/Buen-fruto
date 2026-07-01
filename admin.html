@@ -402,7 +402,7 @@ input[type=file]{display:none}
           </div>
           <div class="card-body" style="padding:0">
             <div class="tabla-wrap"><table>
-              <thead><tr><th>Empleado</th><th>Comidas</th><th>Cargo empleado</th><th>Cargo empresa</th><th>Total</th></tr></thead>
+              <thead><tr><th>Empleado / Fecha</th><th>Platillos</th><th>Extras</th><th>Pago empleado</th><th>Subsidio empresa</th><th>Total</th></tr></thead>
               <tbody id="tabla-reporte"></tbody>
             </table></div>
             <div class="loading" id="loading-reporte"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Calculando reporte...</div></div>
@@ -852,44 +852,140 @@ async function cargarOrdenesHoy(){
 }
 
 // ── REPORTE ──
+let _reporteRaw = [];
+
 async function cargarReporte(){
   document.getElementById('loading-reporte').style.display='flex';
-  const lunes=getDias()[0];
-  const q=query(collection(db,'ordenes'),where('fecha','>=',lunes),orderBy('fecha'));
-  const snap=await getDocs(q);
+  const lunes = getDias()[0];
+  const viernes = getDias()[4];
+  const q = query(collection(db,'ordenes'), where('fecha','>=',lunes), where('fecha','<=',viernes), orderBy('fecha'));
+  const snap = await getDocs(q);
   document.getElementById('loading-reporte').style.display='none';
-  const resumen={};
+
+  // Agrupar por empleado
+  const porEmp = {};
   snap.forEach(d=>{
-    const o=d.data();
-    const uid=o.empleado_uid;
-    if(!resumen[uid]) resumen[uid]={nombre:o.empleado_nombre,comidas:0,cargo_emp:0,cargo_emp2:0};
-    resumen[uid].comidas++;
-    resumen[uid].cargo_emp+=o.cargo;
-    resumen[uid].cargo_emp2+=45; // subsidio empresa siempre $45
+    const o = d.data();
+    const uid = o.empleado_uid;
+    if(!porEmp[uid]) porEmp[uid] = { nombre: o.empleado_nombre||'—', dias: [] };
+    const subsidio = 45; // empresa siempre paga $45
+    const pagoEmp  = o.cargo; // lo que pagó el empleado (ya descontado subsidio)
+    const extras   = (o.extras||[]).map(e=>typeof e==='string'?e:(e.nombre+' $'+e.precio)).join(', ');
+    porEmp[uid].dias.push({
+      fecha: o.fecha,
+      platillos: (o.platillos||[]).join(', ') || '—',
+      extras: extras || '—',
+      pago_empleado: pagoEmp,
+      subsidio_empresa: subsidio,
+      total_dia: pagoEmp + subsidio
+    });
   });
-  const tbody=document.getElementById('tabla-reporte');
-  const rows=Object.values(resumen);
-  if(!rows.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--g3)">Sin datos esta semana</td></tr>'; return; }
-  tbody.innerHTML=rows.map(r=>`
-    <tr>
-      <td style="font-weight:600">${r.nombre||'—'}</td>
-      <td>${r.comidas}</td>
-      <td style="font-weight:700;color:var(--c)">$${r.cargo_emp}</td>
-      <td style="color:var(--v)">$${r.cargo_emp2}</td>
-      <td style="font-weight:800">$${r.cargo_emp+r.cargo_emp2}</td>
-    </tr>`).join('');
-  window._reporteData=rows;
+
+  _reporteRaw = Object.values(porEmp);
+
+  const tbody = document.getElementById('tabla-reporte');
+  if(!_reporteRaw.length){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--g3)">Sin datos esta semana</td></tr>';
+    return;
+  }
+
+  let html = '';
+  _reporteRaw.forEach(emp=>{
+    const totalEmp     = emp.dias.reduce((s,d)=>s+d.pago_empleado,0);
+    const totalEmpresa = emp.dias.reduce((s,d)=>s+d.subsidio_empresa,0);
+    const totalGeneral = totalEmp + totalEmpresa;
+
+    // Fila encabezado del empleado
+    html += `<tr style="background:var(--vl2)">
+      <td colspan="6" style="font-weight:700;font-size:.88rem;padding:.65rem 1rem;color:var(--v)">
+        ${emp.nombre} &nbsp;·&nbsp; ${emp.dias.length} comidas esta semana
+      </td>
+    </tr>`;
+
+    // Filas por día
+    emp.dias.forEach(d=>{
+      const dt = new Date(d.fecha+'T12:00:00');
+      const DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      const fmtDia = DS2[dt.getDay()]+' '+dt.getDate()+' de '+MS2[dt.getMonth()];
+      html += `<tr>
+        <td style="padding-left:1.5rem;color:var(--g2);font-size:.8rem">${fmtDia}</td>
+        <td style="font-size:.82rem">${d.platillos}</td>
+        <td style="font-size:.78rem;color:var(--naranja)">${d.extras}</td>
+        <td style="font-weight:600;color:var(--c)">$${d.pago_empleado}</td>
+        <td style="color:var(--v)">$${d.subsidio_empresa}</td>
+        <td style="font-weight:600">$${d.total_dia}</td>
+      </tr>`;
+    });
+
+    // Fila total del empleado
+    html += `<tr style="border-top:2px solid var(--borde);background:var(--crema)">
+      <td colspan="2" style="font-weight:700;font-size:.85rem;padding:.6rem 1rem">Total ${emp.nombre.split(' ')[0]}</td>
+      <td></td>
+      <td style="font-weight:800;color:var(--c)">$${totalEmp}</td>
+      <td style="font-weight:700;color:var(--v)">$${totalEmpresa}</td>
+      <td style="font-weight:800;font-size:.9rem">$${totalGeneral}</td>
+    </tr>
+    <tr><td colspan="6" style="height:12px;background:transparent;border:none"></td></tr>`;
+  });
+
+  // Total general
+  const gtEmp     = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.pago_empleado,0),0);
+  const gtEmpresa = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.subsidio_empresa,0),0);
+  html += `<tr style="background:var(--v);color:white">
+    <td colspan="2" style="font-weight:800;font-size:.9rem;padding:.75rem 1rem;color:white">TOTAL SEMANA — ${_reporteRaw.length} empleados</td>
+    <td></td>
+    <td style="font-weight:800;font-size:.9rem;color:white">$${gtEmp}</td>
+    <td style="font-weight:700;color:rgba(255,255,255,.8)">$${gtEmpresa}</td>
+    <td style="font-weight:800;font-size:1rem;color:white">$${gtEmp+gtEmpresa}</td>
+  </tr>`;
+
+  tbody.innerHTML = html;
 }
 
-window.exportarCSV=function(){
-  if(!window._reporteData?.length)return;
-  const headers=['Empleado','Comidas','Cargo empleado','Cargo empresa','Total'];
-  const rows=window._reporteData.map(r=>[r.nombre,r.comidas,'$'+r.cargo_emp,'$'+r.cargo_emp2,'$'+(r.cargo_emp+r.cargo_emp2)]);
-  const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='reporte_semana_'+getDias()[0]+'.csv'; a.click();
+window.exportarCSV = function(){
+  if(!_reporteRaw.length) return;
+  const DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const lunes = getDias()[0];
+  const viernes = getDias()[4];
+
+  let rows = [
+    ['REPORTE SEMANAL BUEN FRUTO'],
+    ['Semana: '+lunes+' al '+viernes],
+    ['Generado: '+new Date().toLocaleString('es-MX')],
+    [],
+    ['Empleado','Fecha','Platillos','Extras','Pago empleado','Subsidio empresa','Total día']
+  ];
+
+  _reporteRaw.forEach(emp=>{
+    emp.dias.forEach(d=>{
+      const dt = new Date(d.fecha+'T12:00:00');
+      rows.push([
+        emp.nombre,
+        DS2[dt.getDay()]+' '+dt.getDate()+'/'+('0'+(dt.getMonth()+1)).slice(-2),
+        d.platillos,
+        d.extras,
+        '$'+d.pago_empleado,
+        '$'+d.subsidio_empresa,
+        '$'+d.total_dia
+      ]);
+    });
+    const tEmp = emp.dias.reduce((s,d)=>s+d.pago_empleado,0);
+    const tEmp2 = emp.dias.reduce((s,d)=>s+d.subsidio_empresa,0);
+    rows.push(['SUBTOTAL '+emp.nombre,'','',emp.dias.length+' comidas','$'+tEmp,'$'+tEmp2,'$'+(tEmp+tEmp2)]);
+    rows.push([]);
+  });
+
+  const gtEmp     = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.pago_empleado,0),0);
+  const gtEmpresa = _reporteRaw.reduce((s,e)=>s+e.dias.reduce((ss,d)=>ss+d.subsidio_empresa,0),0);
+  rows.push(['TOTAL GENERAL','','','','$'+gtEmp,'$'+gtEmpresa,'$'+(gtEmp+gtEmpresa)]);
+
+  const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='Reporte_Buen_Fruto_'+lunes+'_al_'+viernes+'.csv'; a.click();
 };
 </script>
 </body>
