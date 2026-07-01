@@ -326,11 +326,6 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
   <!-- GRID ÓRDENES -->
   <div class="grid" id="grid"></div>
 
-  <!-- INPUT INVISIBLE para el lector Bluetooth -->
-  <input type="text" id="scan-input"
-    style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0"
-    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-
 </div>
 
 <!-- TOAST -->
@@ -389,39 +384,31 @@ let cola = [];
 let completadasLista = [];
 
 // ── SCANNER BLUETOOTH INTEGRADO ──
-// El lector BT actúa como teclado HID — escribe el código y presiona Enter
-const scanInput = document.getElementById('scan-input');
-
-// Mantener el input siempre enfocado
-function mantenerFoco() {
-  if (document.activeElement !== scanInput) scanInput.focus();
-}
-setInterval(mantenerFoco, 500);
-document.addEventListener('click', () => setTimeout(mantenerFoco, 100));
-scanInput.focus();
-
+// Captura directa en document — funciona en iPad Safari con lector HID
+// El lector manda caracteres como teclado y termina con Enter
 let scanBuffer = '';
 let scanTimer = null;
 
-scanInput.addEventListener('input', () => {
-  scanBuffer = scanInput.value.toUpperCase().trim();
-  clearTimeout(scanTimer);
-  // Si el lector manda Enter o si hay suficientes chars, procesar
-  scanTimer = setTimeout(() => {
-    if (scanBuffer.length > 5) procesarScan(scanBuffer);
-    scanBuffer = '';
-    scanInput.value = '';
-  }, 150);
-});
-
-scanInput.addEventListener('keydown', e => {
+document.addEventListener('keydown', e => {
+  // Ignorar teclas de control excepto Enter
   if (e.key === 'Enter') {
     e.preventDefault();
     clearTimeout(scanTimer);
-    const code = scanInput.value.toUpperCase().trim();
-    scanInput.value = '';
+    const code = scanBuffer.toUpperCase().trim();
     scanBuffer = '';
-    if (code.length > 5) procesarScan(code);
+    if (code.length > 4) procesarScan(code);
+    return;
+  }
+  // Acumular caracteres — ignorar teclas especiales
+  if (e.key.length === 1) {
+    scanBuffer += e.key;
+    clearTimeout(scanTimer);
+    // Timeout por si el lector no manda Enter
+    scanTimer = setTimeout(() => {
+      const code = scanBuffer.toUpperCase().trim();
+      scanBuffer = '';
+      if (code.length > 4) procesarScan(code);
+    }, 200);
   }
 });
 
@@ -569,6 +556,15 @@ async function marcarLista(id) {
   }
 }
 
+async function cancelarOrden(id) {
+  await updateDoc(doc(db, 'ordenes', id), {
+    estado: 'cancelado',
+    escaneado: false,
+    cancelado_en: new Date()
+  });
+  toast('Orden cancelada');
+}
+
 function fmtHoraTs(ts) {
   const d = ts?.toDate ? ts.toDate() : new Date(ts);
   return (d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
@@ -643,7 +639,10 @@ function render(){
     }
 
     const footHTML = (esActiva || o.hora_preorden)
-      ? '<div class="card-foot"><button class="btn-lista" data-id="'+o.id+'" style="background:'+(o.hora_preorden&&!esActiva?'var(--c)':'var(--v)')+'"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Marcar como lista</button></div>'
+      ? '<div class="card-foot" style="display:flex;gap:.5rem">' +
+          '<button class="btn-lista" data-id="'+o.id+'" style="flex:1;background:'+(o.hora_preorden&&!esActiva?'var(--c)':'var(--v)')+'"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Marcar como lista</button>' +
+          '<button class="btn-cancelar" data-id="'+o.id+'" style="padding:.85rem 1rem;background:#FDE8E8;color:#C0392B;border:none;border-radius:10px;font-family:Inter,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;flex-shrink:0">Cancelar</button>' +
+        '</div>'
       : '';
 
     card.innerHTML =
@@ -664,6 +663,9 @@ function render(){
   // Listeners
   grid.querySelectorAll('.btn-lista').forEach(btn => {
     btn.addEventListener('click', () => marcarLista(btn.dataset.id));
+  });
+  grid.querySelectorAll('.btn-cancelar').forEach(btn => {
+    btn.addEventListener('click', () => cancelarOrden(btn.dataset.id));
   });
 
   // Historial completadas
