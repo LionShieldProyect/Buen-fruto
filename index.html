@@ -135,10 +135,11 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .bc-hint{font-size:.7rem;color:var(--g3);margin-top:.2rem}
 
 /* FULLSCREEN BC */
-.bc-full{display:none;position:fixed;inset:0;background:var(--w);z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:2rem;cursor:pointer}
-.bc-full-hint{font-size:.72rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:2.5rem}
-.bc-full-code{font-family:'Courier New',monospace;font-size:.78rem;color:var(--g3);margin-top:1.25rem}
-.bc-full-ok{font-size:.88rem;font-weight:600;color:var(--v);margin-top:1.5rem}
+.bc-full{display:none;position:fixed;inset:0;background:#FFFFFF;z-index:500;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;cursor:pointer}
+.bc-full-hint{font-size:.72rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:1.5rem}
+.bc-full-code{font-family:'Courier New',monospace;font-size:.9rem;font-weight:700;color:var(--negro);margin-top:1rem;letter-spacing:.12em}
+.bc-full-ok{font-size:.88rem;font-weight:600;color:var(--v);margin-top:1.25rem}
+.bc-full-img{width:100%;max-width:340px;display:block;margin:0 auto}
 
 /* DIAS */
 .dias-wrap{display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.3rem;margin-bottom:1.25rem;scrollbar-width:none}
@@ -353,12 +354,12 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     </button>
   </nav>
 
-  <!-- Barcode fullscreen -->
-  <div class="bc-full" id="bc-full">
+  <!-- Barcode fullscreen para escanear -->
+  <div class="bc-full" id="bc-full" onclick="cerrarBC()">
     <div class="bc-full-hint">Toca para cerrar</div>
-    <div id="bc-svg-big" style="width:100%;max-width:480px"></div>
+    <div id="bc-svg-big" style="width:100%;max-width:340px"></div>
     <div class="bc-full-code" id="bc-num-big"></div>
-    <div class="bc-full-ok">✓ Pago confirmado</div>
+    <div class="bc-full-ok">Apunta el lector aquí</div>
   </div>
 </div>
 
@@ -416,10 +417,13 @@ function fmtFecha(f) {
   return DS2[d.getDay()]+' '+d.getDate()+' de '+MS2[d.getMonth()];
 }
 function newBarcode() {
-  // Solo números — máxima compatibilidad con lectores físicos
-  const ts = Date.now().toString();
-  const rand = Math.floor(Math.random() * 9000 + 1000).toString();
-  return ts.slice(-8) + rand; // 12 dígitos
+  // EAN-13: 12 dígitos + 1 check digit — formato universal
+  const base = ('000000' + Math.floor(Math.random() * 999999999999)).slice(-12);
+  // Calcular check digit EAN-13
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += parseInt(base[i]) * (i % 2 === 0 ? 1 : 3);
+  const check = (10 - (sum % 10)) % 10;
+  return base + check;
 }
 async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return s.exists()?s.data():null; }
 
@@ -453,7 +457,7 @@ function mkBC(tok, el) {
   try {
     const canvas = document.createElement('canvas');
     bwipjs.toCanvas(canvas, {
-      bcid: 'code128',
+      bcid: 'ean13',
       text: tok,
       scale: 4,
       height: 24,
@@ -1074,11 +1078,41 @@ window.cargarHistorial = cargarHistorial;
 
 // ── BARCODE FULLSCREEN ──
 function agrandarBC(tok) {
-  mkBC(tok, document.getElementById('bc-svg-big'));
+  const el = document.getElementById('bc-svg-big');
+  // Barcode más grande para el fullscreen
+  try {
+    const canvas = document.createElement('canvas');
+    bwipjs.toCanvas(canvas, {
+      bcid: 'code128',
+      text: tok,
+      scale: 6,        // escala grande para pantalla completa
+      height: 32,
+      includetext: true,
+      textxalign: 'center',
+      textsize: 14,
+      paddingwidth: 8,
+      paddingheight: 6,
+      backgroundcolor: 'FFFFFF',
+      barcolor: '000000',
+    });
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL('image/png');
+    img.style.cssText = 'width:100%;display:block';
+    while(el.firstChild) el.removeChild(el.firstChild);
+    el.appendChild(img);
+  } catch(e) {
+    el.innerHTML = `<div style="font-family:monospace;font-size:1.4rem;font-weight:900;text-align:center;padding:2rem;letter-spacing:.2em;color:#000;background:#fff">${tok}</div>`;
+  }
   document.getElementById('bc-num-big').textContent = tok;
-  document.getElementById('bc-full').style.display = 'flex';
+  const full = document.getElementById('bc-full');
+  full.style.display = 'flex';
+  // Subir brillo al máximo en iOS si está disponible
+  try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait'); } catch(e) {}
 }
-document.getElementById('bc-full').addEventListener('click', () => { document.getElementById('bc-full').style.display = 'none'; });
+function cerrarBC() {
+  document.getElementById('bc-full').style.display = 'none';
+}
+document.getElementById('bc-full').addEventListener('click', cerrarBC);
 
 // ── CERRAR SESIÓN ──
 document.getElementById('btn-salir').addEventListener('click', async () => {
