@@ -290,14 +290,14 @@ input[type=file]{display:none}
       <!-- DASHBOARD -->
       <div class="seccion on" id="sec-dashboard">
         <div class="metricas" id="metricas-wrap">
-          <div class="metrica verde"><div class="metrica-label">Órdenes hoy</div><div class="metrica-val" id="m-ordenes">—</div><div class="metrica-sub">En el comedor</div></div>
+          <div class="metrica verde"><div class="metrica-label">Órdenes</div><div class="metrica-val" id="m-ordenes">—</div><div class="metrica-sub">En el comedor</div></div>
           <div class="metrica"><div class="metrica-label">Empleados activos</div><div class="metrica-val" id="m-empleados">—</div><div class="metrica-sub">Registrados</div></div>
           <div class="metrica ciruela"><div class="metrica-label">Pre-órdenes hoy</div><div class="metrica-val" id="m-preordenes">—</div><div class="metrica-sub">Con hora agendada</div></div>
           <div class="metrica"><div class="metrica-label">Recaudado hoy</div><div class="metrica-val" id="m-recaudado">—</div><div class="metrica-sub">Empleados + empresa</div></div>
         </div>
 
         <div class="card">
-          <div class="card-head"><span class="card-titulo">Órdenes de hoy</span><span id="dashboard-hora" style="font-size:.75rem;color:var(--g3)">—</span></div>
+          <div class="card-head"><span class="card-titulo">Órdenes</span><span id="dashboard-hora" style="font-size:.75rem;color:var(--g3)">—</span></div>
           <div class="card-body">
             <div class="tabla-wrap"><table>
               <thead><tr><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Hora</th><th>Tipo</th><th>Total</th><th>Estado</th></tr></thead>
@@ -376,12 +376,12 @@ input[type=file]{display:none}
 
       <!-- ÓRDENES HOY -->
       <div class="seccion" id="sec-ordenes">
-        <div class="sec-titulo">Órdenes de hoy</div>
+        <div class="sec-titulo">Órdenes</div>
         <div class="sec-sub" id="ordenes-fecha">—</div>
         <div class="card">
           <div class="card-body" style="padding:0">
             <div class="tabla-wrap"><table>
-              <thead><tr><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Tipo</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Empleado</th><th>Platillos</th><th>Extras</th><th>Tipo</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
               <tbody id="tabla-ordenes"></tbody>
             </table></div>
             <div class="loading" id="loading-ordenes"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Cargando...</div></div>
@@ -452,6 +452,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 const DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -517,7 +518,7 @@ window.irSec=function(sec,el){
   el.classList.add('on');
   document.querySelectorAll('.seccion').forEach(s=>s.classList.remove('on'));
   document.getElementById('sec-'+sec).classList.add('on');
-  const titulos={dashboard:'Dashboard',empleados:'Empleados',menus:'Menús de la semana',ordenes:'Órdenes de hoy',reportes:'Reportes'};
+  const titulos={dashboard:'Dashboard',empleados:'Empleados',menus:'Menús de la semana',ordenes:'Órdenes',reportes:'Reportes'};
   document.getElementById('topbar-titulo').textContent=titulos[sec]||sec;
   if(sec==='ordenes')cargarOrdenesHoy();
   if(sec==='reportes')cargarReporte();
@@ -823,26 +824,32 @@ window.borrarMenu=async function(){
   await deleteDoc(doc(db,'menus',diaMenuSel));
 };
 
-// ── ÓRDENES HOY ──
+// ── ÓRDENES ──
 async function cargarOrdenesHoy(){
   document.getElementById('loading-ordenes').style.display='none';
-  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
+  document.getElementById('ordenes-fecha').textContent='Todas las órdenes activas y futuras';
+  const q=query(collection(db,'ordenes'),where('fecha','>=',hoy()));
   onSnapshot(q, snap=>{
     const docs=[];
     snap.forEach(d=>docs.push({id:d.id,...d.data()}));
-    docs.sort((a,b)=>(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
+    docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
     const tbody=document.getElementById('tabla-ordenes');
-    if(!docs.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes hoy</td></tr>'; return; }
+    if(!docs.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes</td></tr>'; return; }
     tbody.innerHTML='';
     docs.forEach(o=>{
       const cancelada = o.estado==='cancelado';
+      const esHoy = o.fecha === hoy();
+      const dt = new Date(o.fecha+'T12:00:00');
+      const fmtDia = DS[dt.getDay()]+' '+dt.getDate()+'/'+MS2[dt.getMonth()];
       const tr=document.createElement('tr');
       tr.style.opacity = cancelada ? '.45' : '1';
+      tr.style.background = !esHoy && !cancelada ? 'var(--vl2)' : '';
       tr.innerHTML=`
+        <td style="font-size:.75rem;color:var(--g2);white-space:nowrap">${esHoy?'<span class="badge badge-v">Hoy</span>':fmtDia}</td>
         <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
-        <td style="font-size:.78rem;max-width:160px">${(o.platillos||[]).join(', ')||'—'}</td>
+        <td style="font-size:.78rem;max-width:140px">${(o.platillos||[]).join(', ')||'—'}</td>
         <td style="font-size:.78rem;color:var(--naranja)">${(o.extras||[]).map(e=>e.nombre||e).join(', ')||'—'}</td>
-        <td>${o.hora_preorden?'<span class="badge badge-c">Pre-orden</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
+        <td>${o.hora_preorden?'<span class="badge badge-c">⏰ '+o.hora_preorden+'</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
         <td style="font-weight:700">$${o.cargo}</td>
         <td>${cancelada?'<span class="badge badge-r">Cancelada</span>':o.estado==='lista'?'<span class="badge badge-v">✓ Lista</span>':o.escaneado?'<span class="badge badge-v">Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}</td>
         <td>${cancelada?'—':`<button class="btn btn-danger btn-sm" onclick="cancelarOrdenAdmin('${o.id}')">Cancelar</button>`}</td>`;
@@ -921,7 +928,7 @@ async function cargarReporte(){
       </div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Órdenes hoy</div>
+      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Órdenes</div>
       <div style="font-size:1.4rem;font-weight:800;color:var(--negro)" id="reporte-ordenes-hoy">—</div>
       <div style="font-size:.72rem;color:var(--g2);margin-top:.1rem" id="reporte-ordenes-sub">en tiempo real</div>
     </div>
