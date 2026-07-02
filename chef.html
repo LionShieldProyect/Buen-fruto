@@ -412,10 +412,16 @@ let scanBuffer = '';
 let scanTimer = null;
 
 function procesarBuffer() {
-  const code = scanBuffer.toUpperCase().trim();
+  let code = scanBuffer.toUpperCase().trim();
+  // Fix lector COM-598: manda cada caracter doble (EEMMPP→EMP)
+  let dedup = '';
+  for (let i = 0; i < code.length; i++) {
+    if (code[i] !== code[i+1]) dedup += code[i];
+    else i++; // saltar el duplicado
+  }
   scanBuffer = '';
   document.getElementById('scan-status').textContent = 'Listo para escanear';
-  if (code.length > 3) procesarScan(code);
+  if (dedup.length > 3) procesarScan(dedup);
 }
 
 document.addEventListener('keypress', e => {
