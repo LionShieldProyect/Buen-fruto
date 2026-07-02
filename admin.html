@@ -735,18 +735,28 @@ document.getElementById('btn-guardar-emp').addEventListener('click', async()=>{
   const rol=document.getElementById('emp-rol').value;
   const msg=document.getElementById('emp-msg');
   if(!nombre||!email||!pass){ msg.textContent='Completa todos los campos'; msg.className='msg err'; return; }
-  document.getElementById('btn-guardar-emp').textContent='Guardando...';
+  const btn=document.getElementById('btn-guardar-emp');
+  btn.textContent='Guardando...'; btn.disabled=true;
   try{
-    const secApp=initializeApp(cfg,'secondary'+Date.now());
-    const secAuth=getAuth(secApp);
-    const cred=await createUserWithEmailAndPassword(secAuth,email,pass);
-    const codigo_gafete = generarCodigoGafete();
-    await setDoc(doc(db,'empleados',cred.user.uid),{nombre,email,rol,puesto,activo:true,codigo_gafete,creado_en:serverTimestamp()});
-    await signOut(secAuth);
+    // Crear usuario via Firebase Auth REST API — no afecta la sesión del admin
+    const apiKey='AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes';
+    const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,returnSecureToken:false})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error?.message||'Error al crear usuario');
+    const uid=data.localId;
+    const codigo_gafete=generarCodigoGafete();
+    await setDoc(doc(db,'empleados',uid),{nombre,email,rol,puesto,activo:true,codigo_gafete,creado_en:serverTimestamp()});
     msg.textContent='✓ Empleado creado correctamente'; msg.className='msg ok';
-    setTimeout(()=>{ cerrarModalEmp(); },1500);
-  }catch(e){ msg.textContent='Error: '+e.message; msg.className='msg err'; }
-  document.getElementById('btn-guardar-emp').textContent='Guardar';
+    setTimeout(()=>cerrarModalEmp(),1500);
+  }catch(e){
+    msg.textContent='Error: '+(e.message==='EMAIL_EXISTS'?'Este correo ya está registrado':e.message);
+    msg.className='msg err';
+  }
+  btn.textContent='Guardar'; btn.disabled=false;
 });
 
 // ── CSV IMPORT ──
@@ -784,16 +794,20 @@ document.getElementById('btn-importar').addEventListener('click', async()=>{
   document.getElementById('btn-importar').textContent='Importando...';
   document.getElementById('progreso-wrap').style.display='block';
   const msg=document.getElementById('csv-msg');
+  const apiKey='AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes';
   let ok=0,err=0;
   for(let i=0;i<csvData.length;i++){
     const r=csvData[i];
     try{
-      const secApp=initializeApp(cfg,'csv'+Date.now()+i);
-      const secAuth=getAuth(secApp);
-      const cred=await createUserWithEmailAndPassword(secAuth,r.email,r.password||'BuenFruto2025');
-      const codigo_gafete = generarCodigoGafete();
-      await setDoc(doc(db,'empleados',cred.user.uid),{nombre:r.nombre,email:r.email,rol:'empleado',activo:true,codigo_gafete,creado_en:serverTimestamp()});
-      await signOut(secAuth);
+      const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email:r.email,password:r.password||'BuenFruto2025',returnSecureToken:false})
+      });
+      const data=await res.json();
+      if(!res.ok)throw new Error(data.error?.message);
+      const codigo_gafete=generarCodigoGafete();
+      const puesto=r.puesto||'Empleado';
+      await setDoc(doc(db,'empleados',data.localId),{nombre:r.nombre,email:r.email,rol:'empleado',puesto,activo:true,codigo_gafete,creado_en:serverTimestamp()});
       ok++;
     }catch{ err++; }
     document.getElementById('progreso-bar').style.width=((i+1)/csvData.length*100)+'%';
