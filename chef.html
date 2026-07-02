@@ -429,7 +429,11 @@ function procesarBuffer() {
 document.addEventListener('keypress', e => {
   if (e.key === 'Enter') { clearTimeout(scanTimer); procesarBuffer(); return; }
   scanBuffer += e.key;
-  document.getElementById('scan-status').textContent = scanBuffer;
+  // Mostrar deduplicado en tiempo real
+  let preview = '';
+  const raw = scanBuffer.toUpperCase();
+  for (let i = 0; i < raw.length; i += 2) preview += raw[i];
+  document.getElementById('scan-status').textContent = preview || 'Listo para escanear';
   clearTimeout(scanTimer);
   scanTimer = setTimeout(procesarBuffer, 800);
 });
@@ -437,7 +441,10 @@ document.addEventListener('keypress', e => {
 scanInput.addEventListener('keypress', e => {
   if (e.key === 'Enter') { clearTimeout(scanTimer); procesarBuffer(); return; }
   scanBuffer += e.key;
-  document.getElementById('scan-status').textContent = scanBuffer;
+  let preview = '';
+  const raw = scanBuffer.toUpperCase();
+  for (let i = 0; i < raw.length; i += 2) preview += raw[i];
+  document.getElementById('scan-status').textContent = preview || 'Listo para escanear';
   clearTimeout(scanTimer);
   scanTimer = setTimeout(procesarBuffer, 800);
 });
@@ -447,7 +454,10 @@ scanInput.addEventListener('input', () => {
   scanInput.value = '';
   if (val) {
     scanBuffer += val;
-    document.getElementById('scan-status').textContent = scanBuffer;
+    let preview = '';
+    const raw = scanBuffer.toUpperCase();
+    for (let i = 0; i < raw.length; i += 2) preview += raw[i];
+    document.getElementById('scan-status').textContent = preview || 'Listo para escanear';
     clearTimeout(scanTimer);
     scanTimer = setTimeout(procesarBuffer, 800);
   }
