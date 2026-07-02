@@ -470,15 +470,15 @@ async function procesarScan(code) {
   const empDoc = empSnap.docs[0];
   const emp = empDoc.data();
 
-  // Buscar orden activa del empleado para hoy
-  const qOrd = query(collection(db,'ordenes'),
-    where('empleado_uid','==',empDoc.id),
-    where('fecha','==',hoy())
-  );
+  // Buscar orden activa del empleado para hoy — filtro en cliente
+  const qOrd = query(collection(db,'ordenes'), where('empleado_uid','==',empDoc.id));
   const ordSnap = await getDocs(qOrd);
 
   const ordenes = [];
-  ordSnap.forEach(d => { if(d.data().estado !== 'cancelado') ordenes.push({id:d.id,...d.data()}); });
+  ordSnap.forEach(d => {
+    const data = d.data();
+    if (data.fecha === hoy() && data.estado !== 'cancelado') ordenes.push({id:d.id,...data});
+  });
 
   if (!ordenes.length) {
     mostrarScanOverlay('error','Sin orden hoy', emp.nombre,'Este empleado no tiene ninguna orden para hoy');
@@ -549,12 +549,12 @@ document.getElementById('scan-overlay').addEventListener('click', () => {
 function suscribirOrdenes() {
   const q = query(
     collection(db, 'ordenes'),
-    where('fecha', '==', hoy()),
-    orderBy('creado_en', 'asc')
+    where('fecha', '==', hoy())
   );
   onSnapshot(q, snap => {
     const todasHoy = [];
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
+    todasHoy.sort((a,b) => (a.creado_en?.toMillis?.()||0) - (b.creado_en?.toMillis?.()||0));
 
     const nuevasCola = todasHoy.filter(o => {
       if (o.estado === 'lista') return false;
