@@ -752,7 +752,22 @@ function actuTick(modo, menu) {
 // ── PEDIR AHORA ──
 async function pedirAhora() {
   if (!buffetHoy && extrasHoy.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-  await crearOrden(hoy(), null);
+  const bc = newBarcode(), cg = calcCargo(buffetHoy, extrasHoy);
+  const data = {
+    empleado_uid: auth.currentUser.uid,
+    empleado_nombre: perfil.nombre,
+    fecha: hoy(), barcode: bc,
+    platillos: buffetHoy ? platHoy : [],
+    extras: extrasHoy, cargo: cg,
+    tipo: 'momento', hora_preorden: null,
+    estado: 'pagado', escaneado: false,
+    creado_en: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, 'ordenes'), data);
+  ordenes[hoy()] = { id: ref.id, ...data };
+  renderInicio();
+  renderDiasTabs();
+  mostrarConf(hoy(), bc, cg, 'Llegas, escaneas — cocina empieza', buffetHoy, extrasHoy, platHoy);
 }
 
 window.usarAhora = async function(ordenId) {
@@ -859,13 +874,22 @@ function selDia(i) {
     renderItems(document.getElementById('items-det'), menu, 'D');
     document.getElementById('btn-accion-dia').addEventListener('click', async () => {
       if (!buffetDet && extrasDet.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-      if (esHoy) { buffetHoy = buffetDet; extrasHoy = extrasDet; platHoy = platDet; await pedirAhora(); }
-      else {
-        const bc = newBarcode(), cg = calcCargo(buffetDet, extrasDet);
-        const data = { empleado_uid: auth.currentUser.uid, empleado_nombre: perfil.nombre, fecha, barcode: bc, platillos: buffetDet ? platDet : [], extras: extrasDet, cargo: cg, tipo: 'momento', hora_preorden: null, estado: 'pagado', escaneado: false, creado_en: serverTimestamp() };
-        await addDoc(collection(db, 'ordenes'), data);
-        mostrarConf(fecha, bc, cg, 'Llegas, escaneas — cocina empieza', buffetDet, extrasDet, platDet);
-      }
+      const bc = newBarcode(), cg = calcCargo(buffetDet, extrasDet);
+      const data = {
+        empleado_uid: auth.currentUser.uid,
+        empleado_nombre: perfil.nombre,
+        fecha, barcode: bc,
+        platillos: buffetDet ? platDet : [],
+        extras: extrasDet, cargo: cg,
+        tipo: 'momento', hora_preorden: null,
+        estado: 'pagado', escaneado: false,
+        creado_en: serverTimestamp()
+      };
+      const ref = await addDoc(collection(db, 'ordenes'), data);
+      ordenes[fecha] = { id: ref.id, ...data };
+      renderInicio();
+      renderDiasTabs();
+      mostrarConf(fecha, bc, cg, 'Llegas, escaneas — cocina empieza', buffetDet, extrasDet, platDet);
     });
     document.getElementById('btn-accion-hora')?.addEventListener('click', () => {
       if (!buffetDet && extrasDet.length === 0) { alert('Selecciona el buffet o un extra'); return; }
@@ -898,8 +922,25 @@ async function procesarOrden(hora) {
   const ext = esHoy ? extrasHoy : extrasDet;
   const pls = esHoy ? platHoy : platDet;
   const bc = newBarcode(), cg = calcCargo(buf, ext);
-  const data = { empleado_uid: auth.currentUser.uid, empleado_nombre: perfil.nombre, fecha: fechaModal, barcode: bc, platillos: buf ? pls : [], extras: ext, cargo: cg, tipo: hora ? 'preorden' : 'momento', hora_preorden: hora || null, estado: 'pagado', escaneado: false, creado_en: serverTimestamp() };
-  await addDoc(collection(db, 'ordenes'), data);
+  const data = {
+    empleado_uid: auth.currentUser.uid,
+    empleado_nombre: perfil.nombre,
+    fecha: fechaModal,
+    barcode: bc,
+    platillos: buf ? pls : [],
+    extras: ext,
+    cargo: cg,
+    tipo: hora ? 'preorden' : 'momento',
+    hora_preorden: hora || null,
+    estado: 'pagado',
+    escaneado: false,
+    creado_en: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, 'ordenes'), data);
+  // Actualizar localmente de inmediato sin esperar el snapshot
+  ordenes[fechaModal] = { id: ref.id, ...data };
+  renderInicio();
+  renderDiasTabs();
   mostrarConf(fechaModal, bc, cg, hora ? `Lista a las ${hora}` : 'Llegas, escaneas — cocina empieza', buf, ext, pls);
 }
 
@@ -915,7 +956,7 @@ function mostrarConf(fecha, bc, cg, desc, buf, ext, pls) {
 }
 document.getElementById('btn-conf-ok').addEventListener('click', () => {
   document.getElementById('overlay-conf').classList.remove('on');
-  if (ordenes[hoy()]) irTab('t-inicio', document.getElementById('nb-inicio'));
+  irTab('t-inicio', document.getElementById('nb-inicio'));
 });
 
 // ── PEDIDOS ──
