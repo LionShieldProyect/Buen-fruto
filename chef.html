@@ -431,7 +431,7 @@ document.addEventListener('keypress', e => {
   scanBuffer += e.key;
   document.getElementById('scan-status').textContent = scanBuffer;
   clearTimeout(scanTimer);
-  scanTimer = setTimeout(procesarBuffer, 300);
+  scanTimer = setTimeout(procesarBuffer, 800);
 });
 
 scanInput.addEventListener('keypress', e => {
@@ -439,7 +439,7 @@ scanInput.addEventListener('keypress', e => {
   scanBuffer += e.key;
   document.getElementById('scan-status').textContent = scanBuffer;
   clearTimeout(scanTimer);
-  scanTimer = setTimeout(procesarBuffer, 300);
+  scanTimer = setTimeout(procesarBuffer, 800);
 });
 
 scanInput.addEventListener('input', () => {
@@ -449,7 +449,7 @@ scanInput.addEventListener('input', () => {
     scanBuffer += val;
     document.getElementById('scan-status').textContent = scanBuffer;
     clearTimeout(scanTimer);
-    scanTimer = setTimeout(procesarBuffer, 300);
+    scanTimer = setTimeout(procesarBuffer, 800);
   }
 });
 
