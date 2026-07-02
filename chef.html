@@ -390,9 +390,24 @@ setInterval(actualizarReloj,1000);
 let cola = [];
 let completadasLista = [];
 
-// ── SCANNER BLUETOOTH ──
-// El lector BT es un teclado HID externo — manda keypress events al document
-// En iPad Safari, los teclados BT físicos SÍ disparan eventos en document sin necesitar input enfocado
+// ── SCANNER BLUETOOTH — Android Chrome ──
+// En Android, el lector BT HID necesita un input enfocado
+// readonly evita el teclado táctil pero permite recibir del lector físico
+const scanInput = document.createElement('input');
+scanInput.type = 'text';
+scanInput.readOnly = true;
+scanInput.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+document.body.appendChild(scanInput);
+
+// Enfocar sin mostrar teclado
+function enfocarScanner() {
+  scanInput.readOnly = false;
+  scanInput.focus();
+  scanInput.readOnly = true;
+}
+enfocarScanner();
+setInterval(enfocarScanner, 1500);
+
 let scanBuffer = '';
 let scanTimer = null;
 
@@ -404,21 +419,29 @@ function procesarBuffer() {
 }
 
 document.addEventListener('keypress', e => {
-  if (e.key === 'Enter') {
-    clearTimeout(scanTimer);
-    procesarBuffer();
-    return;
-  }
+  if (e.key === 'Enter') { clearTimeout(scanTimer); procesarBuffer(); return; }
   scanBuffer += e.key;
   document.getElementById('scan-status').textContent = scanBuffer;
   clearTimeout(scanTimer);
   scanTimer = setTimeout(procesarBuffer, 300);
 });
 
-document.addEventListener('keydown', e => {
-  // Bloquear que el teclado BT haga scroll u otras acciones
-  if (['ArrowDown','ArrowUp','ArrowLeft','ArrowRight',' '].includes(e.key)) {
-    e.preventDefault();
+scanInput.addEventListener('keypress', e => {
+  if (e.key === 'Enter') { clearTimeout(scanTimer); procesarBuffer(); return; }
+  scanBuffer += e.key;
+  document.getElementById('scan-status').textContent = scanBuffer;
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(procesarBuffer, 300);
+});
+
+scanInput.addEventListener('input', () => {
+  const val = scanInput.value;
+  scanInput.value = '';
+  if (val) {
+    scanBuffer += val;
+    document.getElementById('scan-status').textContent = scanBuffer;
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(procesarBuffer, 300);
   }
 });
 
