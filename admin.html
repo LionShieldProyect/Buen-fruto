@@ -585,14 +585,16 @@ async function cargarEmpleados(){
         <td style="display:flex;gap:.4rem;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="toggleActivo('${d.id}',${e.activo!==false})">${e.activo!==false?'Desactivar':'Activar'}</button>
           ${e.codigo_gafete?`<button class="btn btn-v btn-sm" onclick="imprimirGafete('${d.id}','${e.nombre}','${e.codigo_gafete}')">🖨 Gafete</button>`:''}
+          <button class="btn btn-danger btn-sm" onclick="eliminarEmpleado('${d.id}','${e.nombre}')">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
     });
   });
 }
 
-window.toggleActivo=async function(uid,activo){
-  await updateDoc(doc(db,'empleados',uid),{activo:!activo});
+window.eliminarEmpleado=async function(uid, nombre){
+  if(!confirm('¿Eliminar a '+nombre+'? Esto no se puede deshacer.'))return;
+  await deleteDoc(doc(db,'empleados',uid));
 };
 
 window.imprimirGafete=function(uid, nombre, codigo){
