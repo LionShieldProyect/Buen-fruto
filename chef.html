@@ -413,42 +413,46 @@ document.addEventListener('keydown', e => {
 });
 
 async function procesarScan(code) {
-  const q = query(
-    collection(db, 'ordenes'),
-    where('barcode', '==', code),
-    where('fecha', '==', hoy())
-  );
-  const snap = await getDocs(q);
+  // Buscar empleado por código de gafete
+  const qEmp = query(collection(db,'empleados'), where('codigo_gafete','==',code));
+  const empSnap = await getDocs(qEmp);
 
-  if (snap.empty) {
-    mostrarScanOverlay('error', 'Código inválido', '', 'No se encontró ninguna orden con este código');
+  if (empSnap.empty) {
+    mostrarScanOverlay('error','Gafete inválido','','No se encontró ningún empleado con este código');
     return;
   }
 
-  const ordenDoc = snap.docs[0];
-  const orden = ordenDoc.data();
+  const empDoc = empSnap.docs[0];
+  const emp = empDoc.data();
+
+  // Buscar orden activa del empleado para hoy
+  const qOrd = query(collection(db,'ordenes'),
+    where('empleado_uid','==',empDoc.id),
+    where('fecha','==',hoy())
+  );
+  const ordSnap = await getDocs(qOrd);
+
+  const ordenes = [];
+  ordSnap.forEach(d => { if(d.data().estado !== 'cancelado') ordenes.push({id:d.id,...d.data()}); });
+
+  if (!ordenes.length) {
+    mostrarScanOverlay('error','Sin orden hoy', emp.nombre,'Este empleado no tiene ninguna orden para hoy');
+    return;
+  }
+
+  const orden = ordenes[0];
 
   if (orden.escaneado) {
-    mostrarScanOverlay('ya', 'Ya fue escaneado', orden.empleado_nombre || '', 'Este código ya fue usado');
+    mostrarScanOverlay('ya','Ya escaneado', emp.nombre,'Este empleado ya pasó por el comedor hoy');
     return;
   }
 
-  // Marcar escaneado — sin tocar hora_preorden
-  // Si tiene hora: el chef ya la recibió automáticamente a esa hora, el empleado solo valida su llegada
-  // Si no tiene hora: es pedir ahora, cocina empieza en este momento
-  await updateDoc(doc(db, 'ordenes', ordenDoc.id), {
-    escaneado: true,
-    escaneado_en: new Date()
-  });
+  await updateDoc(doc(db,'ordenes',orden.id),{ escaneado:true, escaneado_en:new Date() });
 
   mostrarScanOverlay(
-    'ok',
-    '¡Bienvenido!',
-    orden.empleado_nombre || 'Empleado',
-    orden.hora_preorden ? 'Tu comida está siendo preparada para las ' + orden.hora_preorden : 'Pasando a cocina ahora',
-    orden.platillos || [],
-    orden.extras || [],
-    orden.hora_preorden || null
+    'ok','¡Bienvenido!', emp.nombre,
+    orden.hora_preorden ? 'Tu comida está siendo preparada para las '+orden.hora_preorden : 'Pasando a cocina ahora',
+    orden.platillos||[], orden.extras||[], orden.hora_preorden||null
   );
 }
 
