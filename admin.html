@@ -417,6 +417,7 @@ input[type=file]{display:none}
     <div class="campo"><label>Nombre completo</label><input type="text" id="emp-nombre" placeholder="Juan García López"/></div>
     <div class="campo"><label>Correo electrónico</label><input type="email" id="emp-email" placeholder="juan@empresa.com"/></div>
     <div class="campo"><label>Contraseña inicial</label><input type="password" id="emp-pass" placeholder="Mínimo 6 caracteres"/></div>
+    <div class="campo"><label>Puesto</label><input type="text" id="emp-puesto" placeholder="Ej. Vendedor, Supervisor, Gerente"/></div>
     <div class="campo"><label>Rol</label>
       <select id="emp-rol">
         <option value="empleado">Empleado</option>
@@ -584,7 +585,7 @@ async function cargarEmpleados(){
         <td style="font-family:monospace;font-size:.78rem;color:var(--v);font-weight:700">${e.codigo_gafete||'—'}</td>
         <td style="display:flex;gap:.4rem;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="toggleActivo('${d.id}',${e.activo!==false})">${e.activo!==false?'Desactivar':'Activar'}</button>
-          ${e.codigo_gafete?`<button class="btn btn-v btn-sm" onclick="imprimirGafete('${d.id}','${e.nombre}','${e.codigo_gafete}')">🖨 Gafete</button>`:''}
+          ${e.codigo_gafete?`<button class="btn btn-v btn-sm" onclick="imprimirGafete('${d.id}','${e.nombre}','${e.codigo_gafete}','${e.puesto||'Empleado'}')">🖨 Gafete</button>`:''}
           <button class="btn btn-danger btn-sm" onclick="eliminarEmpleado('${d.id}','${e.nombre}')">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
@@ -597,33 +598,116 @@ window.eliminarEmpleado=async function(uid, nombre){
   await deleteDoc(doc(db,'empleados',uid));
 };
 
-window.imprimirGafete=function(uid, nombre, codigo){
-  const win = window.open('','_blank','width=400,height=300');
+window.imprimirGafete=function(uid, nombre, codigo, puesto){
+  const iniciales = nombre.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+  const win = window.open('','_blank','width=500,height=650');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <title>Gafete — ${nombre}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
   <style>
-    body{margin:0;padding:20px;font-family:Inter,sans-serif;display:flex;justify-content:center}
-    .gafete{width:320px;border:2px solid #2D5016;border-radius:12px;padding:20px;text-align:center;background:#fff}
-    .empresa{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8E8E93;margin-bottom:4px}
-    .nombre{font-size:18px;font-weight:700;color:#1C1C1E;margin-bottom:2px}
-    .rol{font-size:12px;color:#8E8E93;margin-bottom:16px}
-    svg{width:100%;height:70px}
-    .codigo{font-family:monospace;font-size:13px;color:#48484A;margin-top:6px;letter-spacing:.08em}
-    @media print{body{padding:0}.gafete{border:2px solid #2D5016;page-break-inside:avoid}}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#F7F3EE;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Inter',sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .gafete{
+      width:340px;
+      background:#fff;
+      border-radius:20px;
+      overflow:hidden;
+      box-shadow:0 8px 32px rgba(0,0,0,.12);
+    }
+    /* HEADER VERDE */
+    .header{
+      background:linear-gradient(135deg,#2D5016 0%,#3d6b1f 100%);
+      padding:28px 24px 20px;
+      text-align:center;
+      position:relative;
+    }
+    .header::after{
+      content:'';position:absolute;bottom:-1px;left:0;right:0;height:24px;
+      background:#fff;border-radius:50% 50% 0 0 / 100% 100% 0 0;
+    }
+    .logo-txt{
+      font-family:'Cormorant Garamond',serif;
+      font-size:13px;font-weight:700;
+      color:rgba(255,255,255,.6);
+      letter-spacing:.12em;text-transform:uppercase;
+      margin-bottom:18px;
+    }
+    .logo-x{color:rgba(255,255,255,.35);margin:0 6px}
+    /* AVATAR */
+    .avatar{
+      width:80px;height:80px;border-radius:50%;
+      background:rgba(255,255,255,.15);
+      border:3px solid rgba(255,255,255,.3);
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 0;
+      font-family:'Cormorant Garamond',serif;
+      font-size:28px;font-weight:700;color:#fff;
+    }
+    /* BODY */
+    .body{padding:24px 24px 16px;text-align:center}
+    .nombre{
+      font-family:'Cormorant Garamond',serif;
+      font-size:22px;font-weight:700;color:#1C1C1E;
+      margin-bottom:4px;line-height:1.2;
+    }
+    .puesto{
+      font-size:12px;font-weight:600;
+      color:#fff;background:#2D5016;
+      display:inline-block;padding:3px 14px;
+      border-radius:20px;margin-bottom:20px;
+      letter-spacing:.04em;
+    }
+    /* BARCODE */
+    .bc-wrap{
+      background:#F7F3EE;border-radius:10px;
+      padding:12px 16px 8px;margin:0 0 8px;
+    }
+    .bc-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#C7C7CC;margin-bottom:6px}
+    svg{width:100%;height:64px}
+    .codigo{font-family:monospace;font-size:12px;color:#8E8E93;letter-spacing:.1em;margin-top:4px}
+    /* FOOTER */
+    .footer{
+      background:linear-gradient(135deg,#2D5016 0%,#3d6b1f 100%);
+      padding:10px 24px;
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .footer-txt{font-size:10px;color:rgba(255,255,255,.6);font-weight:500}
+    .footer-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4)}
+    @media print{
+      body{background:#fff}
+      .gafete{box-shadow:none;border:1px solid #ddd}
+    }
   </style>
   </head><body>
   <div class="gafete">
-    <div class="empresa">Buen Fruto — Betel</div>
-    <div class="nombre">${nombre}</div>
-    <div class="rol">Empleado</div>
-    <svg id="bc"></svg>
-    <div class="codigo">${codigo}</div>
+    <div class="header">
+      <div class="logo-txt">Buen Fruto <span class="logo-x">×</span> Betel</div>
+      <div class="avatar">${iniciales}</div>
+    </div>
+    <div class="body">
+      <div class="nombre">${nombre}</div>
+      <div class="puesto">${puesto||'Empleado'}</div>
+      <div class="bc-wrap">
+        <div class="bc-label">Código de acceso al comedor</div>
+        <svg id="bc"></svg>
+        <div class="codigo">${codigo}</div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-txt">Comedor Empresarial</span>
+      <div class="footer-dot"></div>
+      <span class="footer-txt">Buen Fruto</span>
+    </div>
   </div>
   <script>
     window.onload = function(){
-      JsBarcode('#bc','${codigo}',{format:'CODE128',width:2.5,height:60,displayValue:false,margin:6,lineColor:'#000'});
-      setTimeout(function(){ window.print(); },500);
+      JsBarcode('#bc','${codigo}',{
+        format:'CODE128',width:2.8,height:55,
+        displayValue:false,margin:4,
+        lineColor:'#1C1C1E',background:'transparent'
+      });
+      setTimeout(function(){ window.print(); },600);
     };
   <\/script>
   </body></html>`);
@@ -635,6 +719,7 @@ window.mostrarModalEmpleado=function(){
   document.getElementById('emp-nombre').value='';
   document.getElementById('emp-email').value='';
   document.getElementById('emp-pass').value='';
+  document.getElementById('emp-puesto').value='';
   document.getElementById('emp-rol').value='empleado';
   document.getElementById('emp-msg').className='msg';
   document.getElementById('emp-msg').style.display='none';
@@ -646,17 +731,17 @@ document.getElementById('btn-guardar-emp').addEventListener('click', async()=>{
   const nombre=document.getElementById('emp-nombre').value.trim();
   const email=document.getElementById('emp-email').value.trim();
   const pass=document.getElementById('emp-pass').value;
+  const puesto=document.getElementById('emp-puesto').value.trim()||'Empleado';
   const rol=document.getElementById('emp-rol').value;
   const msg=document.getElementById('emp-msg');
   if(!nombre||!email||!pass){ msg.textContent='Completa todos los campos'; msg.className='msg err'; return; }
   document.getElementById('btn-guardar-emp').textContent='Guardando...';
   try{
-    // Crear auth user con segunda instancia para no cerrar sesión del admin
     const secApp=initializeApp(cfg,'secondary'+Date.now());
     const secAuth=getAuth(secApp);
     const cred=await createUserWithEmailAndPassword(secAuth,email,pass);
     const codigo_gafete = generarCodigoGafete();
-    await setDoc(doc(db,'empleados',cred.user.uid),{nombre,email,rol,activo:true,codigo_gafete,creado_en:serverTimestamp()});
+    await setDoc(doc(db,'empleados',cred.user.uid),{nombre,email,rol,puesto,activo:true,codigo_gafete,creado_en:serverTimestamp()});
     await signOut(secAuth);
     msg.textContent='✓ Empleado creado correctamente'; msg.className='msg ok';
     setTimeout(()=>{ cerrarModalEmp(); },1500);
