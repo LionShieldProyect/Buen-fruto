@@ -534,20 +534,19 @@ async function iniciarApp() {
 // ── SUSCRIBIR ÓRDENES EN TIEMPO REAL ──
 function suscribirOrdenes() {
   if (unsubOrdenes) unsubOrdenes();
-  // Query simple por empleado — sin índice compuesto
-  const q = query(
-    collection(db, 'ordenes'),
-    where('empleado_uid', '==', auth.currentUser.uid)
-  );
+  const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid));
   unsubOrdenes = onSnapshot(q, snap => {
     ordenes = {};
     const hoyStr = hoy();
     snap.forEach(d => {
       const data = d.data();
-      if (data.fecha >= hoyStr) {
-        // Guardamos todas incluidas canceladas — renderPedidos las maneja
-        ordenes[data.fecha] = { id: d.id, ...data };
-      }
+      if (data.fecha < hoyStr) return; // solo hoy en adelante
+      const fecha = data.fecha;
+      const existente = ordenes[fecha];
+      // Si ya hay una orden activa para esta fecha, no la sobreescribas con una cancelada
+      if (existente && existente.estado !== 'cancelado' && data.estado === 'cancelado') return;
+      // Si la existente es activa y la nueva también es activa, quedarse con la más reciente
+      ordenes[fecha] = { id: d.id, ...data };
     });
     renderInicio();
     if (document.getElementById('t-pedidos').style.display === 'block') renderPedidos();
@@ -1027,10 +1026,10 @@ async function cargarHistorial() {
   const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid));
   const snap = await getDocs(q);
   const lista = document.getElementById('hist-lista');
-  if (snap.empty) { lista.innerHTML = '<div class="empty"><div class="empty-t">Sin comidas registradas</div></div>'; return; }
   const porMes = {};
   snap.forEach(d => {
     const h = d.data();
+    if (h.estado === 'cancelado') return; // ignorar canceladas
     const dt = new Date(h.fecha+'T12:00:00');
     const mk = dt.getFullYear()+'-'+dt.getMonth();
     if (!porMes[mk]) porMes[mk] = { label: MF[dt.getMonth()]+' '+dt.getFullYear(), sems: {}, total: 0, dias: 0 };
@@ -1040,6 +1039,7 @@ async function cargarHistorial() {
     if (!porMes[mk].sems[sk]) porMes[mk].sems[sk] = { num: ns, items: [], total: 0 };
     porMes[mk].sems[sk].items.push(h); porMes[mk].sems[sk].total += h.cargo;
   });
+  if (!Object.keys(porMes).length) { lista.innerHTML = '<div class="empty"><div class="empty-t">Sin comidas registradas</div></div>'; return; }
   let html = '';
   Object.values(porMes).forEach(mes => {
     html += `<div class="mes-bloque"><div class="mes-head"><div class="mes-nombre">${mes.label}</div><div class="mes-right"><div class="mes-dias">${mes.dias} comidas</div><div class="mes-gasto">−$${mes.total}</div></div></div>`;
