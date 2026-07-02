@@ -221,7 +221,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .spinner{width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bwip-js@3.5.0/dist/bwip-js-min.js"></script>
 </head>
 <body>
 
@@ -356,7 +356,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
   <!-- Barcode fullscreen -->
   <div class="bc-full" id="bc-full">
     <div class="bc-full-hint">Toca para cerrar</div>
-    <svg id="bc-svg-big" viewBox="0 0 280 68" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:480px;height:auto"></svg>
+    <div id="bc-svg-big" style="width:100%;max-width:480px"></div>
     <div class="bc-full-code" id="bc-num-big"></div>
     <div class="bc-full-ok">✓ Pago confirmado</div>
   </div>
@@ -383,7 +383,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
     <div class="conf-sub" id="conf-sub">—</div>
     <div class="conf-ticket" id="conf-ticket"></div>
     <div class="conf-bc">
-      <svg id="conf-bc-svg" viewBox="0 0 280 68" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:63px"></svg>
+      <div id="conf-bc-svg" style="width:100%"></div>
       <div class="conf-bc-code" id="conf-bc-num"></div>
     </div>
     <button class="btn-fill" id="btn-conf-ok">Entendido</button>
@@ -451,23 +451,47 @@ window.irTab = irTab;
 
 function mkBC(tok, el) {
   try {
-    JsBarcode(el, tok, {
-      format: 'CODE128',
-      width: 3,        // barras más anchas — mejor para lectores físicos
-      height: 80,      // más alto
-      displayValue: true,
-      fontSize: 14,
-      margin: 10,
-      lineColor: '#000000',  // negro puro — no verde
-      background: '#FFFFFF'
+    // Crear canvas temporal
+    const canvas = document.createElement('canvas');
+    bwipjs.toCanvas(canvas, {
+      bcid: 'code128',
+      text: tok,
+      scale: 3,
+      height: 18,
+      includetext: true,
+      textxalign: 'center',
+      textsize: 11,
+      paddingwidth: 4,
+      paddingheight: 2,
     });
-  } catch(e) { el.innerHTML = ''; }
+    // Convertir canvas a imagen dentro del SVG container
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL('image/png');
+    img.style.cssText = 'width:100%;height:auto;display:block';
+    el.innerHTML = '';
+    // Si el contenedor es SVG, reemplazarlo con div
+    const parent = el.parentNode;
+    if (el.tagName === 'svg' || el.tagName === 'SVG') {
+      const div = document.createElement('div');
+      div.id = el.id;
+      div.className = el.className;
+      div.style.cssText = el.style.cssText || 'width:100%';
+      div.appendChild(img);
+      parent.replaceChild(div, el);
+    } else {
+      el.appendChild(img);
+    }
+  } catch(e) { console.error('BC error:', e); }
 }
-function mkBChtml(tok) {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+function mkBCcanvas(tok) {
   try {
-    JsBarcode(svg, tok, { format:'CODE128', width:3, height:80, displayValue:true, fontSize:14, margin:10, lineColor:'#000000', background:'#FFFFFF' });
-    return svg.innerHTML;
+    const canvas = document.createElement('canvas');
+    bwipjs.toCanvas(canvas, {
+      bcid: 'code128', text: tok, scale: 3, height: 18,
+      includetext: true, textxalign: 'center', textsize: 11,
+      paddingwidth: 4, paddingheight: 2,
+    });
+    return canvas.toDataURL('image/png');
   } catch(e) { return ''; }
 }
 function calcCargo(buf, ext) { return (buf ? 45 : 0) + ext.reduce((s, e) => s + e.precio, 0); }
@@ -582,7 +606,7 @@ function renderInicio() {
         ${o.hora_preorden ? `<div class="bc-hora" style="display:block">⏰ Tu comida estará lista a las ${o.hora_preorden}</div>` : ''}
         <div class="bc-body">
           <div class="bc-box" id="bc-box-hoy">
-            <svg class="bc-svg" id="bc-svg-hoy" xmlns="http://www.w3.org/2000/svg"></svg>
+            <div id="bc-svg-hoy" style="width:100%"></div>
             <div class="bc-code">${o.barcode}</div>
             <div class="bc-hint">Toca para agrandar</div>
           </div>
@@ -842,7 +866,7 @@ function selDia(i) {
   const dias = getDias(), fecha = dias[i];
   const menu = menusSemana[i];
   const esHoy = fecha === hoy();
-  const tieneOrden = !!ordenes[fecha];
+  const tieneOrden = !!(ordenes[fecha] && ordenes[fecha].estado !== 'cancelado');
   buffetDet = false; extrasDet = [];
   if (menu) platDet = menu.platillos?.slice() || [];
 
@@ -987,7 +1011,7 @@ function renderPedidos() {
         </div>
         ${o.platillos?.length ? `<div style="margin-bottom:.6rem">${o.platillos.map(p=>`<div style="font-size:.82rem;color:var(--g${cancelada?'3':'1'});padding:.1rem 0">• ${p}</div>`).join('')}</div>` : ''}
         ${!cancelada ? `<div class="pedido-bc">
-          <svg id="bc-ped-${fecha}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:63px"></svg>
+          <div id="bc-ped-${fecha}" style="width:100%"></div>
           <div class="pedido-bc-code">${o.barcode}</div>
         </div>` : ''}
       </div>
