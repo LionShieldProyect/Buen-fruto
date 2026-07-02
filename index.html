@@ -451,48 +451,30 @@ window.irTab = irTab;
 
 function mkBC(tok, el) {
   try {
-    // Crear canvas temporal
     const canvas = document.createElement('canvas');
     bwipjs.toCanvas(canvas, {
       bcid: 'code128',
       text: tok,
-      scale: 3,
-      height: 18,
+      scale: 4,
+      height: 24,
       includetext: true,
       textxalign: 'center',
-      textsize: 11,
-      paddingwidth: 4,
-      paddingheight: 2,
+      textsize: 12,
+      paddingwidth: 6,
+      paddingheight: 4,
+      backgroundcolor: 'FFFFFF',
+      barcolor: '000000',
     });
-    // Convertir canvas a imagen dentro del SVG container
     const img = document.createElement('img');
     img.src = canvas.toDataURL('image/png');
-    img.style.cssText = 'width:100%;height:auto;display:block';
-    el.innerHTML = '';
-    // Si el contenedor es SVG, reemplazarlo con div
-    const parent = el.parentNode;
-    if (el.tagName === 'svg' || el.tagName === 'SVG') {
-      const div = document.createElement('div');
-      div.id = el.id;
-      div.className = el.className;
-      div.style.cssText = el.style.cssText || 'width:100%';
-      div.appendChild(img);
-      parent.replaceChild(div, el);
-    } else {
-      el.appendChild(img);
-    }
-  } catch(e) { console.error('BC error:', e); }
-}
-function mkBCcanvas(tok) {
-  try {
-    const canvas = document.createElement('canvas');
-    bwipjs.toCanvas(canvas, {
-      bcid: 'code128', text: tok, scale: 3, height: 18,
-      includetext: true, textxalign: 'center', textsize: 11,
-      paddingwidth: 4, paddingheight: 2,
-    });
-    return canvas.toDataURL('image/png');
-  } catch(e) { return ''; }
+    img.style.cssText = 'width:100%;max-width:400px;display:block;margin:0 auto';
+    while (el.firstChild) el.removeChild(el.firstChild);
+    el.appendChild(img);
+  } catch(e) {
+    console.error('bwip-js error:', e);
+    // Fallback: mostrar código en texto grande
+    el.innerHTML = `<div style="font-family:monospace;font-size:1.1rem;font-weight:700;text-align:center;padding:1rem;letter-spacing:.15em;color:#000">${tok}</div>`;
+  }
 }
 function calcCargo(buf, ext) { return (buf ? 45 : 0) + ext.reduce((s, e) => s + e.precio, 0); }
 function mkTicketHTML(buf, ext, pls) {
@@ -618,11 +600,16 @@ function renderInicio() {
           ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Usar ahora — escaneo y cocina empieza</button>` : ''}
         </div>
       </div>`;
-    setTimeout(() => {
-      const svg = document.getElementById('bc-svg-hoy');
-      if (svg) mkBC(o.barcode, svg);
+    const renderBC = () => {
+      const el = document.getElementById('bc-svg-hoy');
+      if (el && typeof bwipjs !== 'undefined') {
+        mkBC(o.barcode, el);
+      } else {
+        setTimeout(renderBC, 200);
+      }
       document.getElementById('bc-box-hoy')?.addEventListener('click', () => agrandarBC(o.barcode));
-    }, 50);
+    };
+    setTimeout(renderBC, 300);
     return;
   }
 
