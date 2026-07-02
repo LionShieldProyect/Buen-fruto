@@ -1022,39 +1022,42 @@ function renderPedidos() {
 window.renderPedidos = renderPedidos;
 
 // ── HISTORIAL ──
-async function cargarHistorial() {
+let unsubHistorial = null;
+function cargarHistorial() {
   document.getElementById('hist-lista').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando historial...</div>';
+  if (unsubHistorial) unsubHistorial();
   const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid));
-  const snap = await getDocs(q);
-  const lista = document.getElementById('hist-lista');
-  const porMes = {};
-  snap.forEach(d => {
-    const h = d.data();
-    if (h.estado === 'cancelado') return; // ignorar canceladas
-    const dt = new Date(h.fecha+'T12:00:00');
-    const mk = dt.getFullYear()+'-'+dt.getMonth();
-    if (!porMes[mk]) porMes[mk] = { label: MF[dt.getMonth()]+' '+dt.getFullYear(), sems: {}, total: 0, dias: 0 };
-    porMes[mk].total += h.cargo; porMes[mk].dias++;
-    const ns = Math.min(Math.ceil(dt.getDate()/7), 4);
-    const sk = mk+'-'+ns;
-    if (!porMes[mk].sems[sk]) porMes[mk].sems[sk] = { num: ns, items: [], total: 0 };
-    porMes[mk].sems[sk].items.push(h); porMes[mk].sems[sk].total += h.cargo;
-  });
-  if (!Object.keys(porMes).length) { lista.innerHTML = '<div class="empty"><div class="empty-t">Sin comidas registradas</div></div>'; return; }
-  let html = '';
-  Object.values(porMes).forEach(mes => {
-    html += `<div class="mes-bloque"><div class="mes-head"><div class="mes-nombre">${mes.label}</div><div class="mes-right"><div class="mes-dias">${mes.dias} comidas</div><div class="mes-gasto">−$${mes.total}</div></div></div>`;
-    Object.values(mes.sems).sort((a,b)=>a.num-b.num).forEach(sem => {
-      html += `<div class="sem-bloque"><div class="sem-head"><div class="sem-num">${sem.num}</div><div class="sem-label">Semana ${sem.num}</div><div class="sem-total">−$${sem.total}</div></div>`;
-      sem.items.forEach(h => {
-        const d = new Date(h.fecha+'T12:00:00');
-        html += `<div class="hist-row"><div><div class="hist-dia">${DS[d.getDay()]} ${d.getDate()} de ${MS[d.getMonth()]}</div><div class="hist-plato">${h.platillos?.join(', ')||'Solo extras'}${h.extras?.length?' + extras':''}</div></div><div class="hist-monto">−$${h.cargo}</div></div>`;
+  unsubHistorial = onSnapshot(q, snap => {
+    const lista = document.getElementById('hist-lista');
+    const porMes = {};
+    snap.forEach(d => {
+      const h = d.data();
+      if (h.estado === 'cancelado') return; // NUNCA mostrar canceladas
+      const dt = new Date(h.fecha+'T12:00:00');
+      const mk = dt.getFullYear()+'-'+dt.getMonth();
+      if (!porMes[mk]) porMes[mk] = { label: MF[dt.getMonth()]+' '+dt.getFullYear(), sems: {}, total: 0, dias: 0 };
+      porMes[mk].total += h.cargo; porMes[mk].dias++;
+      const ns = Math.min(Math.ceil(dt.getDate()/7), 4);
+      const sk = mk+'-'+ns;
+      if (!porMes[mk].sems[sk]) porMes[mk].sems[sk] = { num: ns, items: [], total: 0 };
+      porMes[mk].sems[sk].items.push(h); porMes[mk].sems[sk].total += h.cargo;
+    });
+    if (!Object.keys(porMes).length) { lista.innerHTML = '<div class="empty"><div class="empty-t">Sin comidas registradas</div></div>'; return; }
+    let html = '';
+    Object.values(porMes).sort((a,b)=>b.label.localeCompare(a.label)).forEach(mes => {
+      html += `<div class="mes-bloque"><div class="mes-head"><div class="mes-nombre">${mes.label}</div><div class="mes-right"><div class="mes-dias">${mes.dias} comidas</div><div class="mes-gasto">−$${mes.total}</div></div></div>`;
+      Object.values(mes.sems).sort((a,b)=>a.num-b.num).forEach(sem => {
+        html += `<div class="sem-bloque"><div class="sem-head"><div class="sem-num">${sem.num}</div><div class="sem-label">Semana ${sem.num}</div><div class="sem-total">−$${sem.total}</div></div>`;
+        sem.items.sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(h => {
+          const d = new Date(h.fecha+'T12:00:00');
+          html += `<div class="hist-row"><div><div class="hist-dia">${DS[d.getDay()]} ${d.getDate()} de ${MS[d.getMonth()]}</div><div class="hist-plato">${h.platillos?.join(', ')||'Solo extras'}${h.extras?.length?' + extras':''}</div></div><div class="hist-monto">−$${h.cargo}</div></div>`;
+        });
+        html += `</div>`;
       });
       html += `</div>`;
     });
-    html += `</div>`;
+    lista.innerHTML = html;
   });
-  lista.innerHTML = html;
 }
 window.cargarHistorial = cargarHistorial;
 
