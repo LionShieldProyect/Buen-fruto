@@ -416,8 +416,10 @@ function fmtFecha(f) {
   return DS2[d.getDay()]+' '+d.getDate()+' de '+MS2[d.getMonth()];
 }
 function newBarcode() {
-  // Code 128 compatible — solo alfanumérico sin guiones
-  return 'BF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
+  // Solo números — máxima compatibilidad con lectores físicos
+  const ts = Date.now().toString();
+  const rand = Math.floor(Math.random() * 9000 + 1000).toString();
+  return ts.slice(-8) + rand; // 12 dígitos
 }
 async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return s.exists()?s.data():null; }
 
@@ -451,19 +453,20 @@ function mkBC(tok, el) {
   try {
     JsBarcode(el, tok, {
       format: 'CODE128',
-      width: 2,
-      height: 60,
-      displayValue: false,
-      margin: 8,
-      lineColor: '#2D5016'
+      width: 3,        // barras más anchas — mejor para lectores físicos
+      height: 80,      // más alto
+      displayValue: true,
+      fontSize: 14,
+      margin: 10,
+      lineColor: '#000000',  // negro puro — no verde
+      background: '#FFFFFF'
     });
   } catch(e) { el.innerHTML = ''; }
 }
 function mkBChtml(tok) {
-  // Para HTML estático usamos un SVG temporal
   const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
   try {
-    JsBarcode(svg, tok, { format:'CODE128', width:2, height:60, displayValue:false, margin:8, lineColor:'#2D5016' });
+    JsBarcode(svg, tok, { format:'CODE128', width:3, height:80, displayValue:true, fontSize:14, margin:10, lineColor:'#000000', background:'#FFFFFF' });
     return svg.innerHTML;
   } catch(e) { return ''; }
 }
