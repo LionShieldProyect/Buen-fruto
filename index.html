@@ -222,7 +222,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .spinner{width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/bwip-js@3.5.0/dist/bwip-js-min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -417,13 +417,7 @@ function fmtFecha(f) {
   return DS2[d.getDay()]+' '+d.getDate()+' de '+MS2[d.getMonth()];
 }
 function newBarcode() {
-  // EAN-13 con prefijo 200 (uso interno) — mismo formato que productos comerciales
-  const mid = Date.now().toString().slice(-9);
-  const base = '200' + mid;
-  let sum = 0;
-  for (let i = 0; i < 12; i++) sum += parseInt(base[i]) * (i % 2 === 0 ? 1 : 3);
-  const check = (10 - (sum % 10)) % 10;
-  return base + check;
+  return 'BF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
 }
 async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return s.exists()?s.data():null; }
 
@@ -454,31 +448,18 @@ function irTab(tabId, btn) {
 window.irTab = irTab;
 
 function mkBC(tok, el) {
-  try {
-    const canvas = document.createElement('canvas');
-    bwipjs.toCanvas(canvas, {
-      bcid: 'ean13',
-      text: tok,
-      scale: 5,
-      height: 28,
-      includetext: true,
-      textxalign: 'center',
-      textsize: 13,
-      paddingwidth: 8,
-      paddingheight: 6,
-      backgroundcolor: 'FFFFFF',
-      barcolor: '000000',
-    });
-    const img = document.createElement('img');
-    img.src = canvas.toDataURL('image/png');
-    img.style.cssText = 'width:100%;display:block;margin:0 auto;background:#fff;border-radius:4px';
-    while (el.firstChild) el.removeChild(el.firstChild);
-    el.appendChild(img);
-  } catch(e) {
-    console.error('bwip-js error:', e);
-    el.innerHTML = `<div style="font-family:monospace;font-size:1rem;font-weight:700;text-align:center;padding:1rem;letter-spacing:.1em;color:#000">${tok}</div>`;
-  }
+  while (el.firstChild) el.removeChild(el.firstChild);
+  const canvas = document.createElement('canvas');
+  el.style.cssText = 'display:flex;justify-content:center;padding:.5rem 0';
+  el.appendChild(canvas);
+  QRCode.toCanvas(canvas, tok, {
+    width: 200, margin: 2,
+    color: { dark: '#000000', light: '#FFFFFF' }
+  }, function(err) {
+    if(err) el.innerHTML = '<div style="font-family:monospace;font-size:.9rem;padding:1rem;text-align:center">'+tok+'</div>';
+  });
 }
+
 function calcCargo(buf, ext) { return (buf ? 45 : 0) + ext.reduce((s, e) => s + e.precio, 0); }
 function mkTicketHTML(buf, ext, pls) {
   let cg = calcCargo(buf, ext), h = '';
