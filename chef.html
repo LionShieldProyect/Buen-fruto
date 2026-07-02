@@ -412,23 +412,10 @@ let scanBuffer = '';
 let scanTimer = null;
 
 function procesarBuffer() {
-  let code = scanBuffer.toUpperCase().trim();
-  // Filtrar caracteres duplicados consecutivos (lector en modo doble)
-  let dedup = '';
-  for (let i = 0; i < code.length; i++) {
-    if (i % 2 === 0) dedup += code[i];
-  }
-  // Verificar si la deduplicación tiene sentido
-  let final = '';
-  for (let i = 0; i < code.length; i++) {
-    if (code[i] !== code[i+1] || i % 2 === 0) {
-      // Detectar patrón duplicado: EEMMPP → EMP
-      if (i === 0 || code[i] !== code[i-1]) final += code[i];
-    }
-  }
+  const code = scanBuffer.toUpperCase().trim();
   scanBuffer = '';
   document.getElementById('scan-status').textContent = 'Listo para escanear';
-  if (final.length > 3) procesarScan(final);
+  if (code.length > 3) procesarScan(code);
 }
 
 document.addEventListener('keypress', e => {
