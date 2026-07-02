@@ -735,8 +735,24 @@ function actuTick(modo, menu) {
 }
 
 // ── PEDIR AHORA ──
+// Cancelar órdenes previas del mismo día para evitar duplicados
+async function cancelarOrdenesDelDia(fecha) {
+  const q = query(collection(db,'ordenes'), where('empleado_uid','==',auth.currentUser.uid));
+  const snap = await getDocs(q);
+  const promises = [];
+  snap.forEach(d => {
+    const data = d.data();
+    if (data.fecha === fecha && data.estado !== 'cancelado') {
+      promises.push(updateDoc(doc(db,'ordenes',d.id), {estado:'cancelado', cancelado_en:new Date()}));
+    }
+  });
+  await Promise.all(promises);
+}
+
 async function pedirAhora() {
   if (!buffetHoy && extrasHoy.length === 0) { alert('Selecciona el buffet o un extra'); return; }
+  // Cancelar cualquier orden previa del día
+  await cancelarOrdenesDelDia(hoy());
   const cg = calcCargo(buffetHoy, extrasHoy);
   const data = {
     empleado_uid: auth.currentUser.uid,
@@ -913,6 +929,8 @@ async function procesarOrden(hora) {
   const ext = esHoy ? extrasHoy : extrasDet;
   const pls = esHoy ? platHoy : platDet;
   const cg = calcCargo(buf, ext);
+  // Cancelar órdenes previas del mismo día
+  await cancelarOrdenesDelDia(fechaModal);
   const data = {
     empleado_uid: auth.currentUser.uid,
     empleado_nombre: perfil.nombre,
