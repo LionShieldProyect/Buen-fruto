@@ -566,34 +566,24 @@ function renderInicio() {
     cont.innerHTML = `
       <div class="bc-card">
         <div class="bc-card-head">
-          <span class="bc-card-titulo">Mi comprobante de hoy</span>
-          <span class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:.67rem">${o.hora_preorden ? 'Pre-orden · ' + o.hora_preorden : 'Listo para escanear'}</span>
+          <span class="bc-card-titulo">Pedido confirmado para hoy</span>
+          <span class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:.67rem">${o.hora_preorden ? 'Pre-orden · ' + o.hora_preorden : 'Listo'}</span>
         </div>
         ${o.hora_preorden ? `<div class="bc-hora" style="display:block">⏰ Tu comida estará lista a las ${o.hora_preorden}</div>` : ''}
         <div class="bc-body">
-          <div class="bc-box" id="bc-box-hoy">
-            <div id="bc-svg-hoy" style="width:100%"></div>
-            <div class="bc-code">${o.barcode}</div>
-            <div class="bc-hint">Toca para agrandar</div>
+          <div style="background:var(--vl);border-radius:var(--rs);padding:1.25rem;text-align:center;margin-bottom:.85rem">
+            <div style="font-size:2rem;margin-bottom:.5rem">🪪</div>
+            <div style="font-size:.9rem;font-weight:700;color:var(--v)">Presenta tu gafete al llegar al comedor</div>
+            <div style="font-size:.75rem;color:var(--g2);margin-top:.25rem">El chef escaneará tu gafete y empezará a preparar</div>
           </div>
-          <div style="margin-top:.85rem;background:var(--crema);border-radius:var(--rs);padding:.75rem 1rem">
+          <div style="background:var(--crema);border-radius:var(--rs);padding:.75rem 1rem">
             <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.4rem">Tu pedido</div>
             ${(o.platillos||[]).map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.15rem 0">• ${p}</div>`).join('')}
             ${(o.extras||[]).map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.15rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')}
           </div>
-          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Usar ahora — escaneo y cocina empieza</button>` : ''}
+          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Cancelar la hora — llegó antes</button>` : ''}
         </div>
       </div>`;
-    const renderBC = () => {
-      const el = document.getElementById('bc-svg-hoy');
-      if (el && typeof bwipjs !== 'undefined') {
-        mkBC(o.barcode, el);
-      } else {
-        setTimeout(renderBC, 200);
-      }
-      document.getElementById('bc-box-hoy')?.addEventListener('click', () => agrandarBC(o.barcode));
-    };
-    setTimeout(renderBC, 300);
     return;
   }
 
@@ -747,11 +737,11 @@ function actuTick(modo, menu) {
 // ── PEDIR AHORA ──
 async function pedirAhora() {
   if (!buffetHoy && extrasHoy.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-  const bc = newBarcode(), cg = calcCargo(buffetHoy, extrasHoy);
+  const cg = calcCargo(buffetHoy, extrasHoy);
   const data = {
     empleado_uid: auth.currentUser.uid,
     empleado_nombre: perfil.nombre,
-    fecha: hoy(), barcode: bc,
+    fecha: hoy(),
     platillos: buffetHoy ? platHoy : [],
     extras: extrasHoy, cargo: cg,
     tipo: 'momento', hora_preorden: null,
@@ -760,9 +750,8 @@ async function pedirAhora() {
   };
   const ref = await addDoc(collection(db, 'ordenes'), data);
   ordenes[hoy()] = { id: ref.id, ...data };
-  renderInicio();
-  renderDiasTabs();
-  mostrarConf(hoy(), bc, cg, 'Llegas, escaneas — cocina empieza', buffetHoy, extrasHoy, platHoy);
+  renderInicio(); renderDiasTabs();
+  mostrarConf(hoy(), null, cg, 'Llega al comedor y escanea tu gafete', buffetHoy, extrasHoy, platHoy);
 }
 
 window.usarAhora = async function(ordenId) {
@@ -855,26 +844,27 @@ function selDia(i) {
         <div class="subsidio"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>La empresa subsidia $45.00</div>
         <div id="items-det"></div>
         <div class="ticket" id="ticket-det"><div id="ticket-det-rows"></div></div>
-        <button class="btn-fill" id="btn-accion-dia" style="margin-top:.9rem" ${tieneOrden?'disabled':''}>
-          ${tieneOrden ? '✓ Ya ordenaste este día' : 'Pedir ahora'}
-        </button>
-        ${!tieneOrden ? `<button class="btn-ghost" id="btn-accion-hora">Pre-ordenar con hora — cocina lo prepara</button>` : ''}
+        ${tieneOrden
+          ? `<button class="btn-fill" disabled style="margin-top:.9rem;background:var(--vl);color:var(--v)">✓ Ya ordenaste este día</button>`
+          : esHoy
+            ? `<button class="btn-fill" id="btn-accion-dia" style="margin-top:.9rem">Pedir ahora</button>
+               <button class="btn-ghost" id="btn-accion-hora">Pre-ordenar con hora — cocina lo prepara</button>`
+            : `<button class="btn-ghost" id="btn-accion-hora">Pre-ordenar con hora — cocina lo prepara</button>`
+        }
       </div>
     </div>`;
 
-  if (tieneOrden) {
-    const ba = document.getElementById('btn-accion-dia');
-    ba.style.background = 'var(--vl)'; ba.style.color = 'var(--v)';
-  } else {
+  if (!tieneOrden) {
     renderItems(document.getElementById('items-det'), menu, 'D');
-    document.getElementById('btn-accion-dia').addEventListener('click', async () => {
+
+    // Pedir ahora — solo para hoy
+    document.getElementById('btn-accion-dia')?.addEventListener('click', async () => {
       if (!buffetDet && extrasDet.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-      const bc = newBarcode(), cg = calcCargo(buffetDet, extrasDet);
+      const cg = calcCargo(buffetDet, extrasDet);
       const data = {
         empleado_uid: auth.currentUser.uid,
         empleado_nombre: perfil.nombre,
-        fecha, barcode: bc,
-        platillos: buffetDet ? platDet : [],
+        fecha, platillos: buffetDet ? platDet : [],
         extras: extrasDet, cargo: cg,
         tipo: 'momento', hora_preorden: null,
         estado: 'pagado', escaneado: false,
@@ -882,9 +872,15 @@ function selDia(i) {
       };
       const ref = await addDoc(collection(db, 'ordenes'), data);
       ordenes[fecha] = { id: ref.id, ...data };
-      renderInicio();
-      renderDiasTabs();
-      mostrarConf(fecha, bc, cg, 'Llegas, escaneas — cocina empieza', buffetDet, extrasDet, platDet);
+      renderInicio(); renderDiasTabs();
+      mostrarConf(fecha, null, cg, 'Llega al comedor y escanea tu gafete', buffetDet, extrasDet, platDet);
+    });
+        creado_en: serverTimestamp()
+      };
+      const ref = await addDoc(collection(db, 'ordenes'), data);
+      ordenes[fecha] = { id: ref.id, ...data };
+      renderInicio(); renderDiasTabs();
+      mostrarConf(fecha, null, cg, 'Llega al comedor y escanea tu gafete', buffetDet, extrasDet, platDet);
     });
     document.getElementById('btn-accion-hora')?.addEventListener('click', () => {
       if (!buffetDet && extrasDet.length === 0) { alert('Selecciona el buffet o un extra'); return; }
@@ -916,20 +912,23 @@ async function procesarOrden(hora) {
   const buf = esHoy ? buffetHoy : buffetDet;
   const ext = esHoy ? extrasHoy : extrasDet;
   const pls = esHoy ? platHoy : platDet;
-  const bc = newBarcode(), cg = calcCargo(buf, ext);
+  const cg = calcCargo(buf, ext);
   const data = {
     empleado_uid: auth.currentUser.uid,
     empleado_nombre: perfil.nombre,
     fecha: fechaModal,
-    barcode: bc,
     platillos: buf ? pls : [],
-    extras: ext,
-    cargo: cg,
+    extras: ext, cargo: cg,
     tipo: hora ? 'preorden' : 'momento',
     hora_preorden: hora || null,
-    estado: 'pagado',
-    escaneado: false,
+    estado: 'pagado', escaneado: false,
     creado_en: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db, 'ordenes'), data);
+  ordenes[fechaModal] = { id: ref.id, ...data };
+  renderInicio(); renderDiasTabs();
+  mostrarConf(fechaModal, null, cg, hora ? `Lista a las ${hora}` : 'Llega al comedor y escanea tu gafete', buf, ext, pls);
+}
   };
   const ref = await addDoc(collection(db, 'ordenes'), data);
   // Actualizar localmente de inmediato sin esperar el snapshot
@@ -945,8 +944,10 @@ document.getElementById('btn-conf-hora').addEventListener('click', async () => {
 function mostrarConf(fecha, bc, cg, desc, buf, ext, pls) {
   document.getElementById('conf-sub').textContent = `${fmtFecha(fecha)} · ${desc}`;
   document.getElementById('conf-ticket').innerHTML = mkTicketHTML(buf||false, ext||[], pls||[]);
-  mkBC(bc, document.getElementById('conf-bc-svg'));
-  document.getElementById('conf-bc-num').textContent = bc;
+  // Sin barcode — el gafete es la identificación
+  const bcDiv = document.getElementById('conf-bc-svg');
+  bcDiv.innerHTML = '<div style="text-align:center;padding:1rem;background:var(--vl);border-radius:var(--rs)"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--v)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:.5rem"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/></svg><div style="font-size:.82rem;font-weight:700;color:var(--v)">Presenta tu gafete al llegar</div></div>';
+  document.getElementById('conf-bc-num').textContent = '';
   document.getElementById('overlay-conf').classList.add('on');
 }
 document.getElementById('btn-conf-ok').addEventListener('click', () => {
@@ -978,31 +979,17 @@ function renderPedidos() {
       </div>
       <div class="pedido-body">
         <div class="pedido-tipo" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">
-          ${cancelada ? 'Orden cancelada' : o.hora_preorden ? '⏰ Lista a las ' + o.hora_preorden : '📲 Escaneas al llegar — cocina empieza'}
+          ${cancelada ? 'Orden cancelada' : o.hora_preorden ? '⏰ Lista a las ' + o.hora_preorden : '🪪 Presenta tu gafete al llegar al comedor'}
         </div>
         ${o.platillos?.length ? `<div style="margin-bottom:.6rem">${o.platillos.map(p=>`<div style="font-size:.82rem;color:var(--g${cancelada?'3':'1'});padding:.1rem 0">• ${p}</div>`).join('')}</div>` : ''}
-        ${!cancelada ? `<div class="pedido-bc">
-          <div id="bc-ped-${fecha}" style="width:100%"></div>
-          <div class="pedido-bc-code">${o.barcode}</div>
-        </div>` : ''}
+        ${!cancelada ? `<div style="background:var(--vl);border-radius:var(--rs);padding:.65rem;text-align:center;margin-bottom:.5rem"><div style="font-size:.78rem;font-weight:600;color:var(--v)">Tu gafete es tu acceso al comedor</div></div>` : ''}
       </div>
       <div class="pedido-footer">
         <span class="pedido-total-lbl">${cancelada ? 'No cobrado' : 'Total pagado'}</span>
         <span class="pedido-total-val" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">$${o.cargo}.00</span>
       </div>`;
 
-    if (!cancelada) {
-      setTimeout(() => {
-        const svgEl = document.getElementById('bc-ped-'+fecha);
-        if (svgEl) mkBC(o.barcode, svgEl);
-      }, 50);
-      const btnAg = document.createElement('button');
-      btnAg.className = 'btn-ghost';
-      btnAg.style.cssText = 'display:block;margin:.5rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem';
-      btnAg.textContent = 'Agrandar código';
-      btnAg.addEventListener('click', () => agrandarBC(o.barcode));
-      card.appendChild(btnAg);
-      if (o.hora_preorden) {
+    if (!cancelada && o.hora_preorden) {
         const btnU = document.createElement('button');
         btnU.className = 'btn-fill';
         btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
