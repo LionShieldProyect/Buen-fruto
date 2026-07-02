@@ -413,14 +413,16 @@ let scanTimer = null;
 
 function procesarBuffer() {
   let code = scanBuffer.toUpperCase().trim();
-  // Fix lector COM-598: manda cada caracter doble (EEMMPP→EMP)
+  // Fix COM-598: duplica cada carácter (EEMMPP8888 → EMP88)
   let dedup = '';
-  for (let i = 0; i < code.length; i++) {
-    if (code[i] !== code[i+1]) dedup += code[i];
-    else i++; // saltar el duplicado
+  for (let i = 0; i < code.length; i += 2) {
+    dedup += code[i];
   }
   scanBuffer = '';
-  document.getElementById('scan-status').textContent = 'Listo para escanear';
+  document.getElementById('scan-status').textContent = dedup || 'Listo para escanear';
+  setTimeout(() => {
+    document.getElementById('scan-status').textContent = 'Listo para escanear';
+  }, 3000);
   if (dedup.length > 3) procesarScan(dedup);
 }
 
