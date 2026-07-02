@@ -386,32 +386,36 @@ setInterval(actualizarReloj,1000);
 let cola = [];
 let completadasLista = [];
 
-// ── SCANNER BLUETOOTH INTEGRADO ──
-// Captura directa en document — funciona en iPad Safari con lector HID
-// El lector manda caracteres como teclado y termina con Enter
-let scanBuffer = '';
-let scanTimer = null;
+// ── SCANNER BLUETOOTH — Input siempre enfocado ──
+const scanInput = document.createElement('input');
+scanInput.type = 'text';
+scanInput.setAttribute('autocomplete','off');
+scanInput.setAttribute('autocorrect','off');
+scanInput.setAttribute('autocapitalize','off');
+scanInput.setAttribute('spellcheck','false');
+scanInput.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:64px;opacity:0;z-index:999;font-size:16px';
+document.body.appendChild(scanInput);
 
-document.addEventListener('keydown', e => {
-  // Ignorar teclas de control excepto Enter
+function enfocarInput() { scanInput.focus(); }
+enfocarInput();
+setInterval(enfocarInput, 800);
+document.addEventListener('touchend', () => setTimeout(enfocarInput, 100));
+
+let scanTimer = null;
+scanInput.addEventListener('input', () => {
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    const code = scanInput.value.toUpperCase().trim();
+    scanInput.value = '';
+    if (code.length > 3) procesarScan(code);
+  }, 150);
+});
+scanInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    e.preventDefault();
     clearTimeout(scanTimer);
-    const code = scanBuffer.toUpperCase().trim();
-    scanBuffer = '';
-    if (code.length > 4) procesarScan(code);
-    return;
-  }
-  // Acumular caracteres — ignorar teclas especiales
-  if (e.key.length === 1) {
-    scanBuffer += e.key;
-    clearTimeout(scanTimer);
-    // Timeout por si el lector no manda Enter
-    scanTimer = setTimeout(() => {
-      const code = scanBuffer.toUpperCase().trim();
-      scanBuffer = '';
-      if (code.length > 4) procesarScan(code);
-    }, 200);
+    const code = scanInput.value.toUpperCase().trim();
+    scanInput.value = '';
+    if (code.length > 3) procesarScan(code);
   }
 });
 
