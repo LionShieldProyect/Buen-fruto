@@ -413,6 +413,9 @@ document.addEventListener('keydown', e => {
 });
 
 async function procesarScan(code) {
+  // DEBUG — mostrar qué llegó del lector
+  toast('Escaneado: ' + code);
+
   // Buscar empleado por código de gafete
   const qEmp = query(collection(db,'empleados'), where('codigo_gafete','==',code));
   const empSnap = await getDocs(qEmp);
