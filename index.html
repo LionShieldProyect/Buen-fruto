@@ -402,31 +402,51 @@ if('serviceWorker' in navigator) {
   </div>
 </div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
-  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc,
-  collection, query, where, orderBy, onSnapshot, getDocs,
-  serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-// Exponer Firebase globalmente para el botón de login
-window._fbReady = false;
-
-const _app = initializeApp({
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+// Firebase compat — funciona sin módulos ES6
+const _app = firebase.initializeApp({
   apiKey: "AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
   authDomain: "buen-fruto.firebaseapp.com",
   projectId: "buen-fruto",
   messagingSenderId: "931992831636",
   appId: "1:931992831636:web:65ee6652748f6418dc9681"
 });
-const auth = getAuth(_app);
-const db   = getFirestore(_app);
+const auth = firebase.auth();
+const db = firebase.firestore();
+// Helpers de Firestore compat
+const { collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, writeBatch } = {
+  collection: (db, ...args) => db.collection(args.join('/')),
+  doc: (db, col, id) => typeof db.collection === 'function' ? db.collection(col).doc(id) : db.doc(id),
+  getDoc: (ref) => ref.get(),
+  setDoc: (ref, data) => ref.set(data),
+  addDoc: (ref, data) => ref.add(data),
+  updateDoc: (ref, data) => ref.update(data),
+  deleteDoc: (ref) => ref.delete(),
+  getDocs: (q) => q.get(),
+  onSnapshot: (q, cb) => q.onSnapshot(cb),
+  query: (col, ...constraints) => {
+    let q = col;
+    constraints.forEach(c => { q = c(q); });
+    return q;
+  },
+  where: (field, op, val) => (q) => q.where(field, op, val),
+  orderBy: (field, dir) => (q) => q.orderBy(field, dir || 'asc'),
+  serverTimestamp: () => firebase.firestore.FieldValue.serverTimestamp(),
+  writeBatch: (db) => db.batch()
+};
+const signInWithEmailAndPassword = (auth, email, pass) => auth.signInWithEmailAndPassword(email, pass);
+const signOut = (auth) => auth.signOut();
+const onAuthStateChanged = (auth, cb) => auth.onAuthStateChanged(cb);
+const initializeApp = () => {};
 window._auth = auth;
 window._db = db;
-window._signIn = signInWithEmailAndPassword;
+window._signIn = (a, e, p) => auth.signInWithEmailAndPassword(e, p);
 window._fbReady = true;
-// Notificar al botón que Firebase está listo
-document.dispatchEvent(new Event('fbready'));
+
+// Firebase ya inicializado arriba
 
 function hoy() { return new Date().toISOString().slice(0,10); }
 function fmtFecha(f) {
