@@ -1072,7 +1072,7 @@ async function cargarReporte(){
       </div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Órdenes</div>
+      <div style="font-size:.7rem;color:var(--g3);margin-bottom:.2rem">Comidas esta semana</div>
       <div style="font-size:1.4rem;font-weight:800;color:var(--negro)" id="reporte-ordenes-hoy">—</div>
       <div style="font-size:.72rem;color:var(--g2);margin-top:.1rem" id="reporte-ordenes-sub">en tiempo real</div>
     </div>
@@ -1167,14 +1167,14 @@ async function cargarReporte(){
   body.innerHTML = html;
 
   // Listener en tiempo real para órdenes de hoy
-  const qHoy = query(collection(db,'ordenes'), where('fecha','==',hoy()));
+  const qHoy = query(collection(db,'ordenes'), where('fecha','>=',getDias()[0]), where('fecha','<=',hoy()));
   onSnapshot(qHoy, snapHoy => {
     const el = document.getElementById('reporte-ordenes-hoy');
     const sub = document.getElementById('reporte-ordenes-sub');
     if (el) {
       const activas = snapHoy.docs.filter(d => d.data().estado !== 'cancelado').length;
       el.textContent = activas;
-      if (sub) sub.textContent = activas === 1 ? '1 comida registrada hoy' : activas + ' comidas registradas hoy';
+      if (sub) sub.textContent = activas === 1 ? '1 comida esta semana' : activas + ' comidas registradas esta semana';
     }
   });
 }
