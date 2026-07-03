@@ -417,6 +417,8 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc,
   collection, query, where, orderBy, onSnapshot, getDocs,
   serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+// Exponer Firebase globalmente para el botón de login
+window._fbReady = false;
 
 const _app = initializeApp({
   apiKey: "AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
@@ -427,6 +429,12 @@ const _app = initializeApp({
 });
 const auth = getAuth(_app);
 const db   = getFirestore(_app);
+window._auth = auth;
+window._db = db;
+window._signIn = signInWithEmailAndPassword;
+window._fbReady = true;
+// Notificar al botón que Firebase está listo
+document.dispatchEvent(new Event('fbready'));
 
 function hoy() { return new Date().toISOString().slice(0,10); }
 function fmtFecha(f) {
@@ -514,6 +522,7 @@ onAuthStateChanged(auth, function(user) {
 
 // ── LOGIN ──
 window.hacerLogin = function() {
+  console.log('hacerLogin llamado');
   var email = document.getElementById('inp-email').value.trim();
   var pass  = document.getElementById('inp-pass').value;
   var err   = document.getElementById('login-err');
@@ -1140,16 +1149,29 @@ document.getElementById('btn-salir').addEventListener('click', async () => {
 </script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-  var btn = document.getElementById("btn-login-real");
-  if (btn) btn.addEventListener("click", function() {
-    if (window.hacerLogin) window.hacerLogin();
-  });
-  var inps = document.querySelectorAll("#inp-email, #inp-pass");
-  inps.forEach(function(inp) {
-    inp.addEventListener("keydown", function(e) {
-      if (e.key === "Enter" && window.hacerLogin) window.hacerLogin();
+function doLogin() {
+  var email = document.getElementById('inp-email').value.trim();
+  var pass = document.getElementById('inp-pass').value;
+  var err = document.getElementById('login-err');
+  var btn = document.getElementById('btn-login-real');
+  if (!email || !pass) { err.style.display='block'; err.textContent='Ingresa tu correo y contraseña'; return; }
+  if (!window._signIn) { err.style.display='block'; err.textContent='Cargando... intenta de nuevo'; return; }
+  err.style.display='none';
+  btn.textContent='Entrando...';
+  window._signIn(window._auth, email, pass)
+    .then(function() { btn.textContent='Entrar'; })
+    .catch(function(e) {
+      err.style.display='block';
+      err.textContent = (e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found')
+        ? 'Correo o contraseña incorrectos' : 'Error: '+e.message;
+      btn.textContent='Entrar';
     });
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('btn-login-real');
+  if (btn) btn.onclick = doLogin;
+  document.addEventListener('keydown', function(e) {
+    if (e.key==='Enter') doLogin();
   });
 });
 </script>
