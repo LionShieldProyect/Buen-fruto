@@ -235,37 +235,29 @@ if('serviceWorker' in navigator) {
 </head>
 <body>
 
-<!-- LOGIN MODAL — dentro de la app -->
-<div id="pg-login" class="pg on" style="background:linear-gradient(160deg,#1a2f0c 0%,var(--v) 60%,#3d6b1f 100%);align-items:center;justify-content:center;padding:2rem 1.5rem">
-  <div style="width:100%;max-width:360px">
-    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:2rem">
-      <div style="width:72px;height:72px;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin-bottom:1rem">
-        <svg viewBox="0 0 44 44" width="38" height="38" fill="none">
-          <ellipse cx="19" cy="29" rx="7" ry="9" fill="rgba(255,255,255,.9)"/>
-          <ellipse cx="29" cy="30" rx="6" ry="8" fill="rgba(255,255,255,.55)"/>
-          <path d="M19 20 Q20 9 27 7 Q25 16 29 22" stroke="rgba(255,255,255,.7)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:700;color:#fff">Buen Fruto</div>
-      <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:.3rem">La pausa que te mereces</div>
-    </div>
+<!-- LOGIN -->
+<div id="pg-login" class="pg on" style="background:linear-gradient(160deg,#1a2f0c,#2D5016);display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:2rem">
+  <div style="width:100%;max-width:340px;text-align:center">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:700;color:#fff;margin-bottom:.3rem">Buen Fruto</div>
+    <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:2rem">La pausa que te mereces</div>
     <div style="background:#fff;border-radius:20px;padding:1.75rem 1.5rem">
-      <div style="margin-bottom:1rem">
-        <label style="display:block;font-size:.68rem;font-weight:600;color:#8E8E93;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Correo</label>
-        <input type="email" id="inp-email" placeholder="tucorreo@empresa.com" autocomplete="email"
-          style="width:100%;padding:.82rem 1rem;border:1.5px solid #E8E2DA;border-radius:10px;font-family:'Inter',sans-serif;font-size:1rem;color:#1C1C1E;background:#F7F3EE;outline:none;-webkit-appearance:none"
-          onkeydown="if(event.key==='Enter')document.getElementById('btn-login').click()"/>
-      </div>
-      <div style="margin-bottom:1.1rem">
-        <label style="display:block;font-size:.68rem;font-weight:600;color:#8E8E93;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Contraseña</label>
-        <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"
-          style="width:100%;padding:.82rem 1rem;border:1.5px solid #E8E2DA;border-radius:10px;font-family:'Inter',sans-serif;font-size:1rem;color:#1C1C1E;background:#F7F3EE;outline:none;-webkit-appearance:none"
-          onkeydown="if(event.key==='Enter')document.getElementById('btn-login').click()"/>
-      </div>
-      <button id="btn-login"
-        style="width:100%;padding:.9rem;background:#2D5016;color:#fff;border:none;border-radius:10px;font-family:'Inter',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;-webkit-appearance:none"
-        id="btn-login-real">Entrar</button>
-      <div id="login-err" style="display:none;background:#FDEDEC;color:#C0392B;border-radius:10px;padding:.6rem .9rem;font-size:.82rem;margin-top:.75rem"></div>
+      <form onsubmit="return false;">
+        <div style="margin-bottom:1rem;text-align:left">
+          <label style="display:block;font-size:.68rem;font-weight:600;color:#8E8E93;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Correo</label>
+          <input id="inp-email" type="email" autocomplete="email" placeholder="tucorreo@empresa.com"
+            style="width:100%;padding:.82rem 1rem;border:1.5px solid #E8E2DA;border-radius:10px;font-size:1rem;font-family:Inter,sans-serif;color:#1C1C1E;background:#F7F3EE;outline:none;box-sizing:border-box;display:block"/>
+        </div>
+        <div style="margin-bottom:1.25rem;text-align:left">
+          <label style="display:block;font-size:.68rem;font-weight:600;color:#8E8E93;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Contraseña</label>
+          <input id="inp-pass" type="password" autocomplete="current-password" placeholder="••••••••"
+            style="width:100%;padding:.82rem 1rem;border:1.5px solid #E8E2DA;border-radius:10px;font-size:1rem;font-family:Inter,sans-serif;color:#1C1C1E;background:#F7F3EE;outline:none;box-sizing:border-box;display:block"/>
+        </div>
+        <button type="button" id="btn-login"
+          style="width:100%;padding:.95rem;background:#2D5016;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;display:block">
+          Entrar
+        </button>
+        <div id="login-err" style="display:none;margin-top:.75rem;padding:.6rem .9rem;background:#FDEDEC;color:#C0392B;border-radius:10px;font-size:.82rem;text-align:left"></div>
+      </form>
     </div>
   </div>
 </div>
@@ -1149,30 +1141,23 @@ document.getElementById('btn-salir').addEventListener('click', async () => {
 </script>
 
 <script>
-function doLogin() {
+document.getElementById('btn-login').addEventListener('click', function() {
   var email = document.getElementById('inp-email').value.trim();
   var pass = document.getElementById('inp-pass').value;
   var err = document.getElementById('login-err');
-  var btn = document.getElementById('btn-login-real');
-  if (!email || !pass) { err.style.display='block'; err.textContent='Ingresa tu correo y contraseña'; return; }
-  if (!window._signIn) { err.style.display='block'; err.textContent='Cargando... intenta de nuevo'; return; }
+  var btn = document.getElementById('btn-login');
+  if (!email || !pass) { err.style.display='block'; err.textContent='Ingresa correo y contraseña'; return; }
+  if (!window._signIn || !window._auth) { err.style.display='block'; err.textContent='Cargando... intenta en un segundo'; return; }
   err.style.display='none';
   btn.textContent='Entrando...';
+  btn.disabled=true;
   window._signIn(window._auth, email, pass)
-    .then(function() { btn.textContent='Entrar'; })
     .catch(function(e) {
       err.style.display='block';
-      err.textContent = (e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found')
-        ? 'Correo o contraseña incorrectos' : 'Error: '+e.message;
+      err.textContent = (e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found') ? 'Correo o contraseña incorrectos' : 'Error: '+e.message;
       btn.textContent='Entrar';
+      btn.disabled=false;
     });
-}
-document.addEventListener('DOMContentLoaded', function() {
-  var btn = document.getElementById('btn-login-real');
-  if (btn) btn.onclick = doLogin;
-  document.addEventListener('keydown', function(e) {
-    if (e.key==='Enter') doLogin();
-  });
 });
 </script>
 </body>
