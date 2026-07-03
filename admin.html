@@ -744,7 +744,7 @@ document.getElementById('btn-guardar-emp').addEventListener('click', async()=>{
     const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,password:pass,returnSecureToken:false})
+      body:JSON.stringify({email,password:pass,returnSecureToken:true})
     });
     const data=await res.json();
     if(!res.ok) throw new Error(data.error?.message||'Error al crear usuario');
