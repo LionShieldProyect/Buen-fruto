@@ -225,6 +225,13 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .spinner{width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
+  });
+}
+</script>
 </head>
 <body>
 
