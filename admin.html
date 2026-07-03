@@ -349,7 +349,7 @@ input[type=file]{display:none}
           <div class="card-body" style="padding:0">
             <div class="loading" id="loading-emp"><div style="padding:1.5rem;display:flex;align-items:center;gap:.5rem"><div class="spinner"></div>Cargando empleados...</div></div>
             <div class="tabla-wrap"><table>
-              <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Código gafete</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Código gafete</th><th>Contraseña</th><th>Acciones</th></tr></thead>
               <tbody id="tabla-empleados"></tbody>
             </table></div>
           </div>
@@ -583,6 +583,7 @@ async function cargarEmpleados(){
         <td><span class="badge ${e.rol==='admin'?'badge-c':e.rol==='chef'?'badge-r':'badge-g'}">${e.rol||'empleado'}</span></td>
         <td><span class="badge ${e.activo!==false?'badge-v':'badge-r'}">${e.activo!==false?'Activo':'Inactivo'}</span></td>
         <td style="font-family:monospace;font-size:.78rem;color:var(--v);font-weight:700">${e.codigo_gafete||'—'}</td>
+        <td style="font-family:monospace;font-size:.78rem;color:var(--g2)">${e.password_texto||'—'}</td>
         <td style="display:flex;gap:.4rem;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="toggleActivo('${d.id}',${e.activo!==false})">${e.activo!==false?'Desactivar':'Activar'}</button>
           ${e.codigo_gafete?`<button class="btn btn-v btn-sm" onclick="imprimirGafete('${d.id}','${e.nombre}','${e.codigo_gafete}','${e.puesto||'Empleado'}')">🖨 Gafete</button>`:''}
@@ -749,7 +750,7 @@ document.getElementById('btn-guardar-emp').addEventListener('click', async()=>{
     if(!res.ok) throw new Error(data.error?.message||'Error al crear usuario');
     const uid=data.localId;
     const codigo_gafete=generarCodigoGafete();
-    await setDoc(doc(db,'empleados',uid),{nombre,email,rol,puesto,activo:true,codigo_gafete,creado_en:serverTimestamp()});
+    await setDoc(doc(db,'empleados',uid),{nombre,email,rol,puesto,activo:true,codigo_gafete,password_texto:pass,creado_en:serverTimestamp()});
     msg.textContent='✓ Empleado creado correctamente'; msg.className='msg ok';
     setTimeout(()=>cerrarModalEmp(),1500);
   }catch(e){
@@ -807,7 +808,7 @@ document.getElementById('btn-importar').addEventListener('click', async()=>{
       if(!res.ok)throw new Error(data.error?.message);
       const codigo_gafete=generarCodigoGafete();
       const puesto=r.puesto||'Empleado';
-      await setDoc(doc(db,'empleados',data.localId),{nombre:r.nombre,email:r.email,rol:'empleado',puesto,activo:true,codigo_gafete,creado_en:serverTimestamp()});
+      await setDoc(doc(db,'empleados',data.localId),{nombre:r.nombre,email:r.email,rol:'empleado',puesto,activo:true,codigo_gafete,password_texto:r.password||'BuenFruto2025',creado_en:serverTimestamp()});
       ok++;
     }catch{ err++; }
     document.getElementById('progreso-bar').style.width=((i+1)/csvData.length*100)+'%';
