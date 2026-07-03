@@ -1,47 +1,126 @@
-(function() {
-  function tryLogin() {
-    var email = document.getElementById('inp-email').value.trim();
-    var pass = document.getElementById('inp-pass').value;
-    var err = document.getElementById('login-err');
-    var btn = document.getElementById('btn-login');
+(function () {
 
-    if (!email || !pass) {
-      err.style.display = 'block';
-      err.textContent = 'Ingresa correo y contraseña';
-      return;
+    console.log("===== LOGIN INICIADO =====");
+
+    const emailInput = document.getElementById("inp-email");
+    const passInput = document.getElementById("inp-pass");
+    const loginBtn = document.getElementById("btn-login");
+    const err = document.getElementById("login-err");
+
+    console.log("Email:", emailInput);
+    console.log("Password:", passInput);
+    console.log("Botón:", loginBtn);
+    console.log("Error:", err);
+
+    if (!emailInput || !passInput || !loginBtn || !err) {
+        console.error("❌ Faltan elementos del HTML.");
+        return;
     }
 
-    err.style.display = 'none';
-    btn.textContent = 'Entrando...';
-    btn.disabled = true;
+    function tryLogin() {
 
-    // Esperar hasta 5 segundos a que Firebase cargue
-    var intentos = 0;
-    function intentar() {
-      if (window._signIn && window._auth) {
-        window._signIn(window._auth, email, pass)
-          .catch(function(e) {
-            err.style.display = 'block';
-            err.textContent = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found')
-              ? 'Correo o contraseña incorrectos' : 'Error: ' + e.message;
-            btn.textContent = 'Entrar';
-            btn.disabled = false;
-          });
-      } else if (intentos < 10) {
-        intentos++;
-        setTimeout(intentar, 500);
-      } else {
-        err.style.display = 'block';
-        err.textContent = 'No se pudo conectar. Verifica tu internet.';
-        btn.textContent = 'Entrar';
-        btn.disabled = false;
-      }
+        console.clear();
+        console.log("===== NUEVO LOGIN =====");
+
+        const email = emailInput.value.trim();
+        const pass = passInput.value;
+
+        console.log("Correo:", email);
+        console.log("Password length:", pass.length);
+
+        if (!email || !pass) {
+
+            err.style.display = "block";
+            err.textContent = "Ingresa correo y contraseña";
+
+            console.warn("Campos vacíos");
+
+            return;
+        }
+
+        err.style.display = "none";
+
+        loginBtn.disabled = true;
+        loginBtn.textContent = "Entrando...";
+
+        let intentos = 0;
+
+        function esperarFirebase() {
+
+            console.log("Intento", intentos);
+
+            console.log("window._auth =", window._auth);
+            console.log("window._signIn =", window._signIn);
+
+            if (window._auth && window._signIn) {
+
+                console.log("Firebase encontrado.");
+
+                window._signIn(window._auth, email, pass)
+
+                    .then(function (userCredential) {
+
+                        console.log("LOGIN EXITOSO");
+                        console.log(userCredential);
+
+                    })
+
+                    .catch(function (e) {
+
+                        console.error("Firebase Error:");
+                        console.error(e);
+
+                        err.style.display = "block";
+                        err.textContent =
+                            e.code + " | " + e.message;
+
+                        loginBtn.disabled = false;
+                        loginBtn.textContent = "Entrar";
+
+                    });
+
+            }
+
+            else {
+
+                intentos++;
+
+                if (intentos < 10) {
+
+                    setTimeout(esperarFirebase, 500);
+
+                }
+
+                else {
+
+                    console.error("Firebase nunca cargó.");
+
+                    err.style.display = "block";
+                    err.textContent = "Firebase no cargó.";
+
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = "Entrar";
+
+                }
+
+            }
+
+        }
+
+        esperarFirebase();
+
     }
-    intentar();
-  }
 
-  document.getElementById('btn-login').addEventListener('click', tryLogin);
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') tryLogin();
-  });
+    loginBtn.addEventListener("click", tryLogin);
+
+    document.addEventListener("keydown", function (e) {
+
+        if (e.key === "Enter") {
+
+            tryLogin();
+
+        }
+
+    });
+
 })();
