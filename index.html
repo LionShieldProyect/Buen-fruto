@@ -485,11 +485,25 @@ function getDias() {
 // ── AUTH ──
 onAuthStateChanged(auth, async user => {
   if (!user) { pg('pg-login'); return; }
-  perfil = await getPerfil(user.uid);
-  if (!perfil) { await signOut(auth); pg('pg-login'); return; }
-  if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
-  if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
-  iniciarApp();
+  try {
+    perfil = await getPerfil(user.uid);
+    if (!perfil) { await signOut(auth); pg('pg-login'); return; }
+    if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
+    if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
+    iniciarApp();
+  } catch(e) {
+    console.error('Error cargando perfil:', e);
+    // Si falla Firestore, intentar de nuevo en 2 seg
+    setTimeout(async () => {
+      try {
+        perfil = await getPerfil(user.uid);
+        if (perfil) iniciarApp();
+      } catch(e2) {
+        await signOut(auth);
+        pg('pg-login');
+      }
+    }, 2000);
+  }
 });
 
 document.getElementById('btn-login').addEventListener('click', async () => {
@@ -498,13 +512,22 @@ document.getElementById('btn-login').addEventListener('click', async () => {
   const err   = document.getElementById('login-err');
   if (!email || !pass) { err.style.display = 'block'; err.textContent = 'Ingresa tu correo y contraseña'; return; }
   err.style.display = 'none';
-  document.getElementById('btn-login').textContent = 'Entrando...';
+  const btn = document.getElementById('btn-login');
+  btn.textContent = 'Entrando...'; btn.disabled = true;
   try {
     await signInWithEmailAndPassword(auth, email, pass);
   } catch(e) {
     err.style.display = 'block';
-    err.textContent = 'Correo o contraseña incorrectos';
-    document.getElementById('btn-login').textContent = 'Entrar';
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      err.textContent = 'Correo o contraseña incorrectos';
+    } else if (e.code === 'auth/too-many-requests') {
+      err.textContent = 'Demasiados intentos. Espera un momento.';
+    } else if (e.code === 'auth/network-request-failed') {
+      err.textContent = 'Sin conexión. Verifica tu internet.';
+    } else {
+      err.textContent = 'Error: ' + e.message;
+    }
+    btn.textContent = 'Entrar'; btn.disabled = false;
   }
 });
 
