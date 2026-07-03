@@ -222,7 +222,6 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .spinner{width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -446,19 +445,6 @@ function irTab(tabId, btn) {
   if (btn) btn.classList.add('on');
 }
 window.irTab = irTab;
-
-function mkBC(tok, el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
-  const canvas = document.createElement('canvas');
-  el.style.cssText = 'display:flex;justify-content:center;padding:.5rem 0';
-  el.appendChild(canvas);
-  QRCode.toCanvas(canvas, tok, {
-    width: 200, margin: 2,
-    color: { dark: '#000000', light: '#FFFFFF' }
-  }, function(err) {
-    if(err) el.innerHTML = '<div style="font-family:monospace;font-size:.9rem;padding:1rem;text-align:center">'+tok+'</div>';
-  });
-}
 
 function calcCargo(buf, ext) { return (buf ? 45 : 0) + ext.reduce((s, e) => s + e.precio, 0); }
 function mkTicketHTML(buf, ext, pls) {
@@ -1117,38 +1103,7 @@ function cargarHistorial() {
 window.cargarHistorial = cargarHistorial;
 
 // ── BARCODE FULLSCREEN ──
-function agrandarBC(tok) {
-  const el = document.getElementById('bc-svg-big');
-  // Barcode más grande para el fullscreen
-  try {
-    const canvas = document.createElement('canvas');
-    bwipjs.toCanvas(canvas, {
-      bcid: 'ean13',
-      text: tok,
-      scale: 6,        // escala grande para pantalla completa
-      height: 32,
-      includetext: true,
-      textxalign: 'center',
-      textsize: 14,
-      paddingwidth: 8,
-      paddingheight: 6,
-      backgroundcolor: 'FFFFFF',
-      barcolor: '000000',
-    });
-    const img = document.createElement('img');
-    img.src = canvas.toDataURL('image/png');
-    img.style.cssText = 'width:100%;display:block';
-    while(el.firstChild) el.removeChild(el.firstChild);
-    el.appendChild(img);
-  } catch(e) {
-    el.innerHTML = `<div style="font-family:monospace;font-size:1.4rem;font-weight:900;text-align:center;padding:2rem;letter-spacing:.2em;color:#000;background:#fff">${tok}</div>`;
-  }
-  document.getElementById('bc-num-big').textContent = tok;
-  const full = document.getElementById('bc-full');
-  full.style.display = 'flex';
-  // Subir brillo al máximo en iOS si está disponible
-  try { screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait'); } catch(e) {}
-}
+function agrandarBC(tok) { } // ya no se usa — sistema de gafetes
 function cerrarBC() {
   document.getElementById('bc-full').style.display = 'none';
 }
