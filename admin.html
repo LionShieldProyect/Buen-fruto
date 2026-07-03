@@ -1115,17 +1115,20 @@ async function cargarReporte(){
         </thead>
         <tbody>`;
 
-    emp.dias.forEach(d=>{
+    emp.dias.forEach((d,di)=>{
       const dt = new Date(d.fecha+'T12:00:00');
       const fmtDia = DS_R[dt.getDay()]+' '+dt.getDate()+' '+MS_R[dt.getMonth()];
+      const bg = di%2===0 ? 'var(--w)' : '#FAFAF8';
       html += `
-          <tr style="border-bottom:1px solid var(--borde2)">
-            <td style="padding:.55rem .75rem;color:var(--g2);white-space:nowrap">${fmtDia}</td>
-            <td style="padding:.55rem .75rem;color:var(--negro)">${d.platillos}</td>
-            <td style="padding:.55rem .75rem;color:${d.extras==='—'?'var(--g3)':'var(--naranja)'}">${d.extras}</td>
-            <td style="padding:.55rem .75rem;text-align:right;font-weight:600;color:var(--negro)">$${d.pago_empleado}.00</td>
-            <td style="padding:.55rem .75rem;text-align:right;color:var(--v)">$${d.subsidio_empresa}.00</td>
-            <td style="padding:.55rem .75rem;text-align:right;font-weight:700;color:var(--negro)">$${d.total_dia}.00</td>
+          <tr style="border-bottom:1.5px solid var(--borde);background:${bg}">
+            <td style="padding:.65rem .75rem;white-space:nowrap">
+              <span style="display:inline-block;background:var(--vl);color:var(--v);font-size:.72rem;font-weight:700;padding:.2rem .65rem;border-radius:20px">${fmtDia}</span>
+            </td>
+            <td style="padding:.65rem .75rem;color:var(--negro)">${d.platillos}</td>
+            <td style="padding:.65rem .75rem;color:${d.extras==='—'?'var(--g3)':'var(--naranja)'}">${d.extras}</td>
+            <td style="padding:.65rem .75rem;text-align:right;font-weight:600;color:var(--negro)">$${d.pago_empleado}.00</td>
+            <td style="padding:.65rem .75rem;text-align:right;color:var(--v)">$${d.subsidio_empresa}.00</td>
+            <td style="padding:.65rem .75rem;text-align:right;font-weight:700;color:var(--negro)">$${d.total_dia}.00</td>
           </tr>`;
     });
 
