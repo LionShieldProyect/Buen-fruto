@@ -472,52 +472,58 @@ function getDias() {
 }
 
 // ── AUTH ──
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, function(user) {
   if (!user) { pg('pg-login'); return; }
-  try {
-    perfil = await getPerfil(user.uid);
-    if (!perfil) { await signOut(auth); pg('pg-login'); return; }
-    if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
-    if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
-    iniciarApp();
-  } catch(e) {
-    console.error('Error cargando perfil:', e);
-    // Si falla Firestore, intentar de nuevo en 2 seg
-    setTimeout(async () => {
-      try {
-        perfil = await getPerfil(user.uid);
-        if (perfil) iniciarApp();
-      } catch(e2) {
-        await signOut(auth);
-        pg('pg-login');
-      }
-    }, 2000);
-  }
+  getDoc(doc(db, 'empleados', user.uid))
+    .then(function(snap) {
+      if (!snap.exists()) { signOut(auth); pg('pg-login'); return; }
+      perfil = snap.data();
+      if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
+      if (perfil.rol === 'chef')  { window.location.href = 'chef.html';  return; }
+      iniciarApp();
+    })
+    .catch(function(e) {
+      console.error('Error perfil:', e);
+      setTimeout(function() {
+        getDoc(doc(db, 'empleados', user.uid))
+          .then(function(snap) {
+            if (snap.exists()) { perfil = snap.data(); iniciarApp(); }
+            else { signOut(auth); pg('pg-login'); }
+          })
+          .catch(function() { signOut(auth); pg('pg-login'); });
+      }, 2000);
+    });
 });
 
-document.getElementById('btn-login').addEventListener('click', async () => {
-  const email = document.getElementById('inp-email').value.trim();
-  const pass  = document.getElementById('inp-pass').value;
-  const err   = document.getElementById('login-err');
-  if (!email || !pass) { err.style.display = 'block'; err.textContent = 'Ingresa tu correo y contraseña'; return; }
+document.getElementById('btn-login').addEventListener('click', function() {
+  var email = document.getElementById('inp-email').value.trim();
+  var pass  = document.getElementById('inp-pass').value;
+  var err   = document.getElementById('login-err');
+  var btn   = document.getElementById('btn-login');
   err.style.display = 'none';
-  const btn = document.getElementById('btn-login');
-  btn.textContent = 'Entrando...'; btn.disabled = true;
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) {
+  if (!email || !pass) {
     err.style.display = 'block';
-    if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
-      err.textContent = 'Correo o contraseña incorrectos';
-    } else if (e.code === 'auth/too-many-requests') {
-      err.textContent = 'Demasiados intentos. Espera un momento.';
-    } else if (e.code === 'auth/network-request-failed') {
-      err.textContent = 'Sin conexión. Verifica tu internet.';
-    } else {
-      err.textContent = 'Error: ' + e.message;
-    }
-    btn.textContent = 'Entrar'; btn.disabled = false;
+    err.textContent = 'Ingresa tu correo y contraseña';
+    return;
   }
+  btn.textContent = 'Entrando...';
+  btn.disabled = true;
+  signInWithEmailAndPassword(auth, email, pass)
+    .then(function() {
+      // onAuthStateChanged se encarga del resto
+    })
+    .catch(function(e) {
+      err.style.display = 'block';
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found') {
+        err.textContent = 'Correo o contraseña incorrectos';
+      } else if (e.code === 'auth/too-many-requests') {
+        err.textContent = 'Demasiados intentos. Espera un momento.';
+      } else {
+        err.textContent = 'Error: ' + e.message;
+      }
+      btn.textContent = 'Entrar';
+      btn.disabled = false;
+    });
 });
 
 // ── INICIAR APP ──
