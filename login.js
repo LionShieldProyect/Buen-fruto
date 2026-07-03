@@ -1,126 +1,42 @@
 (function () {
 
-    console.log("===== LOGIN INICIADO =====");
+const btn = document.getElementById("btn-login");
+const err = document.getElementById("login-err");
 
-    const emailInput = document.getElementById("inp-email");
-    const passInput = document.getElementById("inp-pass");
-    const loginBtn = document.getElementById("btn-login");
-    const err = document.getElementById("login-err");
+btn.onclick = async function () {
 
-    console.log("Email:", emailInput);
-    console.log("Password:", passInput);
-    console.log("Botón:", loginBtn);
-    console.log("Error:", err);
+    const email = document.getElementById("inp-email").value.trim();
+    const pass = document.getElementById("inp-pass").value;
 
-    if (!emailInput || !passInput || !loginBtn || !err) {
-        console.error("❌ Faltan elementos del HTML.");
+    alert("Botón funcionando");
+
+    if (!window._auth) {
+        alert("ERROR: _auth no existe");
         return;
     }
 
-    function tryLogin() {
+    if (!window._signIn) {
+        alert("ERROR: signIn no existe");
+        return;
+    }
 
-        console.clear();
-        console.log("===== NUEVO LOGIN =====");
+    try {
 
-        const email = emailInput.value.trim();
-        const pass = passInput.value;
+        alert("Firebase encontrado");
 
-        console.log("Correo:", email);
-        console.log("Password length:", pass.length);
+        const cred = await window._signIn(window._auth,email,pass);
 
-        if (!email || !pass) {
+        alert("LOGIN EXITOSO");
 
-            err.style.display = "block";
-            err.textContent = "Ingresa correo y contraseña";
+        console.log(cred);
 
-            console.warn("Campos vacíos");
+    } catch(e){
 
-            return;
-        }
-
-        err.style.display = "none";
-
-        loginBtn.disabled = true;
-        loginBtn.textContent = "Entrando...";
-
-        let intentos = 0;
-
-        function esperarFirebase() {
-
-            console.log("Intento", intentos);
-
-            console.log("window._auth =", window._auth);
-            console.log("window._signIn =", window._signIn);
-
-            if (window._auth && window._signIn) {
-
-                console.log("Firebase encontrado.");
-
-                window._signIn(window._auth, email, pass)
-
-                    .then(function (userCredential) {
-
-                        console.log("LOGIN EXITOSO");
-                        console.log(userCredential);
-
-                    })
-
-                    .catch(function (e) {
-
-                        console.error("Firebase Error:");
-                        console.error(e);
-
-                        err.style.display = "block";
-                        err.textContent =
-                            e.code + " | " + e.message;
-
-                        loginBtn.disabled = false;
-                        loginBtn.textContent = "Entrar";
-
-                    });
-
-            }
-
-            else {
-
-                intentos++;
-
-                if (intentos < 10) {
-
-                    setTimeout(esperarFirebase, 500);
-
-                }
-
-                else {
-
-                    console.error("Firebase nunca cargó.");
-
-                    err.style.display = "block";
-                    err.textContent = "Firebase no cargó.";
-
-                    loginBtn.disabled = false;
-                    loginBtn.textContent = "Entrar";
-
-                }
-
-            }
-
-        }
-
-        esperarFirebase();
+        alert(e.code);
+        console.error(e);
 
     }
 
-    loginBtn.addEventListener("click", tryLogin);
-
-    document.addEventListener("keydown", function (e) {
-
-        if (e.key === "Enter") {
-
-            tryLogin();
-
-        }
-
-    });
+};
 
 })();
