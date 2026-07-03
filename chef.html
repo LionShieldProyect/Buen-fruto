@@ -593,6 +593,14 @@ function suscribirOrdenes() {
   });
 }
 
+function horaEnMin(horaStr) {
+  if (!horaStr) return 9999;
+  const p = horaStr.replace(' pm','').replace(' am','').split(':');
+  let h = parseInt(p[0]), m = parseInt(p[1]||0);
+  if (horaStr.includes('pm') && h !== 12) h += 12;
+  return h * 60 + m;
+}
+
 // Verificar si la hora de pre-orden ya llegó con anticipación dinámica
 function horaAlcanzada(horaStr, totalPreordenes) {
   if (!horaStr) return false;
@@ -655,34 +663,43 @@ function cuentaRegresiva(horaStr){
 function render(){
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
-  const normales = cola.filter(o => !o.hora_preorden);
-  const preords  = cola.filter(o => !!o.hora_preorden);
 
-  document.getElementById('cnt-activa').textContent = normales.length > 0 ? '1' : '0';
-  document.getElementById('cnt-espera').textContent = Math.max(0, normales.length-1) + preords.length;
-  document.getElementById('cnt-listas').textContent = completadasLista.length;
+  // Separar y ordenar
+  const preords  = cola.filter(o => !!o.hora_preorden)
+                       .sort((a,b) => horaEnMin(a.hora_preorden) - horaEnMin(b.hora_preorden));
+  const normales = cola.filter(o => !o.hora_preorden);
+
+  document.getElementById('cnt-activa').textContent  = normales.length > 0 ? '1' : preords.length > 0 ? '1' : '0';
+  document.getElementById('cnt-espera').textContent  = Math.max(0, normales.length-1) + preords.length;
+  document.getElementById('cnt-listas').textContent  = completadasLista.length;
 
   if (cola.length === 0 && completadasLista.length === 0) {
     const e = document.createElement('div'); e.className = 'empty-full';
-    e.innerHTML = '<div class="empty-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#2D5016" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="empty-titulo">Todo en orden</div><div class="empty-sub">Las órdenes aparecerán cuando los empleados escaneen su código</div>';
+    e.innerHTML = '<div class="empty-icon"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#2D5016" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="empty-titulo">Todo en orden</div><div class="empty-sub">Las órdenes aparecerán cuando los empleados escaneen su gafete</div>';
     grid.appendChild(e); return;
   }
 
-  cola.forEach((o, i) => {
-    const esActiva = !o.hora_preorden && normales.length > 0 && normales[0].id === o.id;
-    const bloqueada = !o.hora_preorden && !esActiva;
-    const card = document.createElement('div');
-    card.className = 'orden-card' + (esActiva ? ' activa' : (bloqueada ? ' bloqueada' : ''));
-    if (o.hora_preorden) card.style.cssText += 'border:2px solid var(--c)!important;animation:none!important;opacity:1!important;pointer-events:auto!important;filter:none!important';
+  // Primero pre-órdenes (por hora), luego normales (FIFO)
+  const ordenFinal = [...preords, ...normales];
 
-    const headBg = o.hora_preorden ? 'var(--c)' : 'var(--v)';
-    const badge = esActiva
-      ? '<span class="card-badge activa">Preparando</span>'
-      : o.hora_preorden
-        ? '<span class="card-badge" style="background:rgba(255,255,255,.2);color:white">⏰ Pre-orden</span>'
+  ordenFinal.forEach((o, i) => {
+    const esPreorden = !!o.hora_preorden;
+    // La primera normal es la activa — pre-órdenes siempre activas
+    const esActiva = esPreorden || (!esPreorden && normales[0]?.id === o.id);
+    const bloqueada = !esPreorden && !esActiva;
+
+    const card = document.createElement('div');
+    card.className = 'orden-card' + (esActiva && !bloqueada ? (esPreorden ? '' : ' activa') : (bloqueada ? ' bloqueada' : ''));
+    if (esPreorden) card.style.cssText += 'border:2px solid var(--c)!important;animation:none!important;opacity:1!important;pointer-events:auto!important;filter:none!important;box-shadow:0 4px 20px rgba(74,25,66,.15)!important';
+
+    const headBg = esPreorden ? 'var(--c)' : 'var(--v)';
+    const badge = esPreorden
+      ? '<span class="card-badge" style="background:rgba(255,255,255,.2);color:white">⏰ Pre-orden</span>'
+      : esActiva
+        ? '<span class="card-badge activa">Preparando</span>'
         : '<span class="card-badge espera">#'+(normales.indexOf(o)+1)+' en cola</span>';
 
-    const tiempoTxt = o.hora_preorden ? 'Lista para las '+o.hora_preorden : (esActiva ? 'Preparando ahora' : 'En espera');
+    const tiempoTxt = esPreorden ? 'Lista para las '+o.hora_preorden : (esActiva ? 'Preparando ahora' : 'En espera');
     const plHTML = (o.platillos||[]).map(p => '<div class="platillo"><div class="platillo-dot"></div>'+p+'</div>').join('');
     let exHTML = '';
     if ((o.extras||[]).length) {
@@ -692,7 +709,7 @@ function render(){
     }
 
     let timerHTML = '';
-    if (o.hora_preorden) {
+    if (esPreorden) {
       const cr = cuentaRegresiva(o.hora_preorden);
       const urg = cr && cr.includes('Faltan') && parseInt(cr.replace(/[^0-9]/g,'')) < 15;
       timerHTML = '<div class="timer-bar" style="background:'+(urg?'var(--naranjal)':'var(--cl)')+';color:'+(urg?'var(--naranja)':'var(--c)')+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lista para las <strong>'+o.hora_preorden+'</strong> &nbsp;·&nbsp; '+cr+'</div>';
@@ -700,10 +717,9 @@ function render(){
       timerHTML = '<div class="timer-bar"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Llegó '+fmtEspera(o.creado_en)+'</div>';
     }
 
-    const footHTML = (esActiva || o.hora_preorden)
-      ? '<div class="card-foot" style="display:flex;gap:.5rem">' +
-          '<button class="btn-lista" data-id="'+o.id+'" style="flex:1;background:'+(o.hora_preorden&&!esActiva?'var(--c)':'var(--v)')+'"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Marcar como lista</button>' +
-        '</div>'
+    // Botón: activa normal + todas las pre-órdenes
+    const footHTML = (!bloqueada)
+      ? '<div class="card-foot"><button class="btn-lista" data-id="'+o.id+'" style="background:'+(esPreorden?'var(--c)':'var(--v)')+'"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Marcar como lista</button></div>'
       : '';
 
     card.innerHTML =
