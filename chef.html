@@ -566,12 +566,12 @@ function suscribirOrdenes() {
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
     todasHoy.sort((a,b) => (a.creado_en?.toMillis?.()||0) - (b.creado_en?.toMillis?.()||0));
 
+    const totalPreordenes = todasHoy.filter(o => o.hora_preorden && o.estado !== 'lista' && o.estado !== 'cancelado').length;
+
     const nuevasCola = todasHoy.filter(o => {
-      if (o.estado === 'lista') return false;
-      // Pedir ahora o código solo: necesita escaneo
+      if (o.estado === 'lista' || o.estado === 'cancelado') return false;
       if (!o.hora_preorden) return o.escaneado;
-      // Pre-orden con hora: aparece automáticamente cuando llega la hora
-      return horaAlcanzada(o.hora_preorden);
+      return horaAlcanzada(o.hora_preorden, totalPreordenes);
     });
 
     // Detectar órdenes nuevas para toast
@@ -593,15 +593,18 @@ function suscribirOrdenes() {
   });
 }
 
-// Verificar si la hora de pre-orden ya llegó
-function horaAlcanzada(horaStr) {
+// Verificar si la hora de pre-orden ya llegó con anticipación dinámica
+function horaAlcanzada(horaStr, totalPreordenes) {
   if (!horaStr) return false;
   const p = horaStr.replace(' pm','').replace(' am','').split(':');
   let h = parseInt(p[0]), m = parseInt(p[1]||0);
   if (horaStr.includes('pm') && h !== 12) h += 12;
   const ahora = new Date();
   const obj = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), h, m, 0);
-  return ahora >= obj;
+  // Anticipación: 10 min base + 5 min por cada pre-orden adicional
+  const anticipacion = 10 + (Math.max(0, totalPreordenes - 1) * 5);
+  const objConAnticipacion = new Date(obj.getTime() - anticipacion * 60000);
+  return ahora >= objConAnticipacion;
 }
 
 // ── MARCAR LISTA ──

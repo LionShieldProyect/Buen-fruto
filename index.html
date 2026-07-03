@@ -909,14 +909,45 @@ function selDia(i) {
 
 // ── MODAL ──
 const HORAS = ['2:00','2:15','2:30','2:45','3:00','3:15','3:30','3:45','4:00','4:15','4:30'];
+
+function horaEnMinutos(horaStr) {
+  const p = horaStr.replace(' pm','').split(':');
+  let h = parseInt(p[0]), m = parseInt(p[1]||0);
+  if (h !== 12) h += 12;
+  return h * 60 + m;
+}
+
 function abrirModal() {
   horaModal = null;
   const grid = document.getElementById('hora-grid'); grid.innerHTML = '';
+  const ahora = new Date();
+  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
+  const esFechaHoy = fechaModal === hoy();
+
+  let hayHorasDisponibles = false;
   HORAS.forEach(h => {
-    const btn = document.createElement('button'); btn.className = 'hora-btn'; btn.textContent = h + ' pm';
-    btn.addEventListener('click', () => { document.querySelectorAll('.hora-btn').forEach(b => b.classList.remove('on')); btn.classList.add('on'); horaModal = h + ' pm'; });
+    const btn = document.createElement('button');
+    btn.className = 'hora-btn';
+    btn.textContent = h + ' pm';
+    // Bloquear horas pasadas solo si es hoy
+    const pasada = esFechaHoy && horaEnMinutos(h) <= ahoraMin;
+    if (pasada) {
+      btn.disabled = true;
+      btn.style.cssText = 'opacity:.35;cursor:not-allowed;text-decoration:line-through';
+    } else {
+      hayHorasDisponibles = true;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.hora-btn').forEach(b => b.classList.remove('on'));
+        btn.classList.add('on');
+        horaModal = h + ' pm';
+      });
+    }
     grid.appendChild(btn);
   });
+
+  if (!hayHorasDisponibles) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--g2);font-size:.85rem;padding:1rem">Ya no hay horas disponibles para hoy</div>';
+  }
   document.getElementById('modal-hora').classList.add('on');
 }
 function cerrarModal() { document.getElementById('modal-hora').classList.remove('on'); }
@@ -929,6 +960,7 @@ async function procesarOrden(hora) {
   const ext = esHoy ? extrasHoy : extrasDet;
   const pls = esHoy ? platHoy : platDet;
   const cg = calcCargo(buf, ext);
+  if (cg === 0) { alert('Selecciona el buffet o un extra'); cerrarModal(); return; }
   // Cancelar órdenes previas del mismo día
   await cancelarOrdenesDelDia(fechaModal);
   const data = {
