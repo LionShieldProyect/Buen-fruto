@@ -355,22 +355,11 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
   </div>
 </div>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
-  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDocs }
-  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-const _app = initializeApp({
-  apiKey:"AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
-  authDomain:"buen-fruto.firebaseapp.com",
-  projectId:"buen-fruto",
-  messagingSenderId:"931992831636",
-  appId:"1:931992831636:web:65ee6652748f6418dc9681"
-});
-const auth = getAuth(_app);
-const db   = getFirestore(_app);
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="fb-compat.js"></script>
+<script>
 
 const DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const MS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];

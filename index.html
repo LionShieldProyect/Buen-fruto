@@ -2,9 +2,6 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-<meta http-equiv="Pragma" content="no-cache"/>
-<meta http-equiv="Expires" content="0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <meta name="theme-color" content="#2D5016"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -225,39 +222,30 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .spinner{width:18px;height:18px;border:2px solid var(--borde);border-top-color:var(--v);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<script>
-if('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    regs.forEach(function(r){ r.unregister(); });
-  });
-}
-</script>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div id="pg-login" class="pg on" style="background:linear-gradient(160deg,#1a2f0c,#2D5016);display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:2rem">
-  <div style="width:100%;max-width:340px;text-align:center">
-    <div style="font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:700;color:#fff;margin-bottom:.3rem">Buen Fruto</div>
-    <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:2rem">La pausa que te mereces</div>
-    <div style="background:#fff;border-radius:20px;padding:1.75rem 1.5rem">
-      <form onsubmit="return false;">
-        <div style="margin-bottom:1rem;text-align:left">
-          <label style="display:block;font-size:.68rem;font-weight:600;color:#8E8E93;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Correo</label>
-          <input id="inp-email" type="email" autocomplete="email" placeholder="tucorreo@empresa.com"
-            style="width:100%;padding:.82rem 1rem;border:1.5px solid #E8E2DA;border-radius:10px;font-size:1rem;font-family:Inter,sans-serif;color:#1C1C1E;background:#F7F3EE;outline:none;box-sizing:border-box;display:block"/>
-        </div>
-        <div style="margin-bottom:1.25rem;text-align:left">
-          <label style="display:block;font-size:.68rem;font-weight:600;color:#8E8E93;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Contraseña</label>
-          <input id="inp-pass" type="password" autocomplete="current-password" placeholder="••••••••"
-            style="width:100%;padding:.82rem 1rem;border:1.5px solid #E8E2DA;border-radius:10px;font-size:1rem;font-family:Inter,sans-serif;color:#1C1C1E;background:#F7F3EE;outline:none;box-sizing:border-box;display:block"/>
-        </div>
-        <button type="button" id="btn-login"
-          style="width:100%;padding:.95rem;background:#2D5016;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;display:block">
-          Entrar
-        </button>
-        <div id="login-err" style="display:none;margin-top:.75rem;padding:.6rem .9rem;background:#FDEDEC;color:#C0392B;border-radius:10px;font-size:.82rem;text-align:left"></div>
-      </form>
+<div id="pg-login" class="pg on">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-ring">
+        <svg viewBox="0 0 44 44" width="38" height="38" fill="none">
+          <ellipse cx="19" cy="29" rx="7" ry="9" fill="rgba(255,255,255,.9)"/>
+          <ellipse cx="29" cy="30" rx="6" ry="8" fill="rgba(255,255,255,.55)"/>
+          <path d="M19 20 Q20 9 27 7 Q25 16 29 22" stroke="rgba(255,255,255,.7)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M22 13 Q29 8 33 11" stroke="rgba(255,255,255,.4)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+          <path d="M21 17 Q14 11 11 14" stroke="rgba(255,255,255,.4)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="login-brand">Buen Fruto</div>
+      <div class="login-tagline">La pausa que te mereces, cada día</div>
+    </div>
+    <div class="login-form">
+      <div class="campo"><label>Correo electrónico</label><input type="email" id="inp-email" placeholder="tucorreo@empresa.com" autocomplete="email"/></div>
+      <div class="campo"><label>Contraseña</label><input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"/></div>
+      <button class="btn-fill" id="btn-login">Entrar</button>
+      <div class="err" id="login-err">Correo o contraseña incorrectos</div>
     </div>
   </div>
 </div>
@@ -285,7 +273,7 @@ if('serviceWorker' in navigator) {
     <!-- INICIO -->
     <div id="t-inicio">
       <div class="saludo">
-        <div class="titulo-seccion" id="sal-nombre">Hola </div>
+        <div class="titulo-seccion" id="sal-nombre">Hola 👋</div>
         <div class="sub-seccion" id="sal-fecha">—</div>
       </div>
       <div id="inicio-contenido"><div class="loading"><div class="spinner"></div>Cargando menú...</div></div>
@@ -402,33 +390,16 @@ if('serviceWorker' in navigator) {
   </div>
 </div>
 
+<!-- Firebase Compat -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="fb-compat.js"></script>
+
 <script>
-firebase.initializeApp({
-  apiKey: "AIzaSyDFOypq8OfX1QmZpoZAdsXmqKYauswBjes",
-  authDomain: "buen-fruto.firebaseapp.com",
-  projectId: "buen-fruto",
-  messagingSenderId: "931992831636",
-  appId: "1:931992831636:web:65ee6652748f6418dc9681"
-});
-var auth = firebase.auth();
-var db = firebase.firestore();
-window._signIn = function(a,e,p){ return auth.signInWithEmailAndPassword(e,p); };
-console.log('Firebase listo');
-</script>
-<script>
-// Helpers Firebase compat
-function fbCollection(colName) { return db.collection(colName); }
-function fbDoc(colName, docId) { return db.collection(colName).doc(docId); }
-function fbQuery(colRef, ...wheres) {
-  var q = colRef;
-  wheres.forEach(function(w) { if(w) q = q.where(w[0], w[1], w[2]); });
-  return q;
-}
-function fbOrderBy(q, field, dir) { return q.orderBy(field, dir||'asc'); }
-function fbServerTimestamp() { return firebase.firestore.FieldValue.serverTimestamp(); }
+// ==== LOGICA DE LA APP ====
+
+
 
 function hoy() { return new Date().toISOString().slice(0,10); }
 function fmtFecha(f) {
@@ -440,7 +411,7 @@ function fmtFecha(f) {
 function newBarcode() {
   return 'BF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
 }
-async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return s.exists()?s.data():null; }
+async function getPerfil(uid) { const s=await getDoc(doc(db,'empleados',uid)); return (s.exists?s.data():null); }
 
 // ── ESTADO ──
 let perfil = null;
@@ -474,7 +445,7 @@ function mkTicketHTML(buf, ext, pls) {
   if (buf) {
     h += `<div class="t-row"><span class="l">Buffet del día</span><span class="v">$90.00</span></div>`;
     if (pls?.length) h += `<div style="font-size:.72rem;color:var(--g2);padding:.15rem 0 .3rem;line-height:1.5">${pls.join(' · ')}</div>`;
-    h += `<div class="t-row desc"><span class="l">Beneficio empresa</span><span class="v">- $45.00</span></div>`;
+    h += `<div class="t-row desc"><span class="l">Beneficio empresa</span><span class="v">− $45.00</span></div>`;
   }
   if (ext.length) { h += `<div class="t-div"></div>`; ext.forEach(e => { h += `<div class="t-row"><span class="l">${e.nombre}</span><span class="v">$${e.precio}.00</span></div>`; }); }
   h += `<div class="t-div"></div><div class="t-row tot"><span class="l">Total a pagar</span><span class="v">$${cg}.00</span></div>`;
@@ -491,59 +462,59 @@ function getDias() {
 }
 
 // ── AUTH ──
-onAuthStateChanged(auth, function(user) {
+onAuthStateChanged(auth, async user => {
   if (!user) { pg('pg-login'); return; }
-  getDoc(doc(db, 'empleados', user.uid))
-    .then(function(snap) {
-      if (!snap.exists()) { signOut(auth); pg('pg-login'); return; }
-      perfil = snap.data();
-      if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
-      if (perfil.rol === 'chef')  { window.location.href = 'chef.html';  return; }
-      iniciarApp();
-    })
-    .catch(function(e) {
-      console.error('Error perfil:', e);
-      setTimeout(function() {
-        getDoc(doc(db, 'empleados', user.uid))
-          .then(function(snap) {
-            if (snap.exists()) { perfil = snap.data(); iniciarApp(); }
-            else { signOut(auth); pg('pg-login'); }
-          })
-          .catch(function() { signOut(auth); pg('pg-login'); });
-      }, 2000);
-    });
+  try {
+    perfil = await getPerfil(user.uid);
+    if (!perfil) { await signOut(auth); pg('pg-login'); return; }
+    if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
+    if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
+    iniciarApp();
+  } catch(e) {
+    console.error('Error cargando perfil:', e);
+    // Si falla Firestore, intentar de nuevo en 2 seg
+    setTimeout(async () => {
+      try {
+        perfil = await getPerfil(user.uid);
+        if (perfil) iniciarApp();
+      } catch(e2) {
+        await signOut(auth);
+        pg('pg-login');
+      }
+    }, 2000);
+  }
 });
 
-// ── LOGIN ──
-window.hacerLogin = function() {
-  console.log('hacerLogin llamado');
-  var email = document.getElementById('inp-email').value.trim();
-  var pass  = document.getElementById('inp-pass').value;
-  var err   = document.getElementById('login-err');
-  var btn   = document.getElementById('btn-login');
-  if (!email || !pass) {
-    err.style.display = 'block';
-    err.textContent = 'Ingresa tu correo y contraseña';
-    return;
-  }
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass  = document.getElementById('inp-pass').value;
+  const err   = document.getElementById('login-err');
+  if (!email || !pass) { err.style.display = 'block'; err.textContent = 'Ingresa tu correo y contraseña'; return; }
   err.style.display = 'none';
-  btn.textContent = 'Entrando...';
-  btn.style.opacity = '.7';
-  signInWithEmailAndPassword(auth, email, pass)
-    .catch(function(e) {
-      err.style.display = 'block';
-      err.textContent = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password')
-        ? 'Correo o contraseña incorrectos' : 'Error: ' + e.message;
-      btn.textContent = 'Entrar';
-      btn.style.opacity = '1';
-    });
-};
+  const btn = document.getElementById('btn-login');
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    err.style.display = 'block';
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      err.textContent = 'Correo o contraseña incorrectos';
+    } else if (e.code === 'auth/too-many-requests') {
+      err.textContent = 'Demasiados intentos. Espera un momento.';
+    } else if (e.code === 'auth/network-request-failed') {
+      err.textContent = 'Sin conexión. Verifica tu internet.';
+    } else {
+      err.textContent = 'Error: ' + e.message;
+    }
+    btn.textContent = 'Entrar'; btn.disabled = false;
+  }
+});
 
 // ── INICIAR APP ──
 async function iniciarApp() {
   const n = perfil.nombre;
   document.getElementById('top-nombre').textContent = n.split(' ')[0];
-  document.getElementById('sal-nombre').textContent = 'Hola, ' + n.split(' ')[0] + ' ';
+  document.getElementById('sal-nombre').textContent = 'Hola, ' + n.split(' ')[0] + ' 👋';
   document.getElementById('sal-fecha').textContent = 'Hoy es ' + fmtFecha(hoy());
   document.getElementById('pf-nombre').textContent = n;
   document.getElementById('pf-email').textContent = perfil.email;
@@ -581,7 +552,7 @@ let unsubMenuHoy = null;
 async function cargarMenuHoy() {
   if (unsubMenuHoy) unsubMenuHoy();
   unsubMenuHoy = onSnapshot(doc(db, 'menus', hoy()), snap => {
-    menuHoy = snap.exists() ? snap.data() : null;
+    menuHoy = snap.exists ? snap.data() : null;
     renderInicio();
   });
 }
@@ -600,10 +571,10 @@ function renderInicio() {
           <span class="bc-card-titulo">Pedido confirmado para hoy</span>
           <span class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:.67rem">${o.hora_preorden ? 'Pre-orden · ' + o.hora_preorden : 'Listo'}</span>
         </div>
-        ${o.hora_preorden ? `<div class="bc-hora" style="display:block"> Tu comida estará lista a las ${o.hora_preorden}</div>` : ''}
+        ${o.hora_preorden ? `<div class="bc-hora" style="display:block">⏰ Tu comida estará lista a las ${o.hora_preorden}</div>` : ''}
         <div class="bc-body">
           <div style="background:var(--vl);border-radius:var(--rs);padding:1.25rem;text-align:center;margin-bottom:.85rem">
-            <div style="font-size:2rem;margin-bottom:.5rem"></div>
+            <div style="font-size:2rem;margin-bottom:.5rem">🪪</div>
             <div style="font-size:.9rem;font-weight:700;color:var(--v)">Presenta tu gafete al llegar al comedor</div>
             <div style="font-size:.75rem;color:var(--g2);margin-top:.25rem">El chef escaneará tu gafete y empezará a preparar</div>
           </div>
@@ -843,7 +814,7 @@ async function cargarMenuSemana() {
   menusSemana = dias.map(f => ({ fecha: f, nombre: null }));
   dias.forEach((f, i) => {
     const unsub = onSnapshot(doc(db, 'menus', f), snap => {
-      menusSemana[i] = snap.exists() ? { fecha: f, ...snap.data() } : { fecha: f, nombre: null };
+      menusSemana[i] = snap.exists ? { fecha: f, ...snap.data() } : { fecha: f, nombre: null };
       renderDiasTabs();
       if (diaIdx === i) selDia(i);
     });
@@ -915,13 +886,6 @@ function selDia(i) {
         extras: extrasDet, cargo: cg,
         tipo: 'momento', hora_preorden: null,
         estado: 'pagado', escaneado: false,
-        creado_en: serverTimestamp()
-      };
-      const ref = await addDoc(collection(db, 'ordenes'), data);
-      ordenes[fecha] = { id: ref.id, ...data };
-      renderInicio(); renderDiasTabs();
-      mostrarConf(fecha, null, cg, 'Llega al comedor y escanea tu gafete', buffetDet, extrasDet, platDet);
-    });
         creado_en: serverTimestamp()
       };
       const ref = await addDoc(collection(db, 'ordenes'), data);
@@ -1010,14 +974,6 @@ async function procesarOrden(hora) {
   renderInicio(); renderDiasTabs();
   mostrarConf(fechaModal, null, cg, hora ? `Lista a las ${hora}` : 'Llega al comedor y escanea tu gafete', buf, ext, pls);
 }
-  };
-  const ref = await addDoc(collection(db, 'ordenes'), data);
-  // Actualizar localmente de inmediato sin esperar el snapshot
-  ordenes[fechaModal] = { id: ref.id, ...data };
-  renderInicio();
-  renderDiasTabs();
-  mostrarConf(fechaModal, bc, cg, hora ? `Lista a las ${hora}` : 'Llegas, escaneas — cocina empieza', buf, ext, pls);
-}
 
 document.getElementById('btn-conf-hora').addEventListener('click', async () => { if (!horaModal) { alert('Selecciona una hora'); return; } cerrarModal(); await procesarOrden(horaModal); });
 
@@ -1060,7 +1016,7 @@ function renderPedidos() {
       </div>
       <div class="pedido-body">
         <div class="pedido-tipo" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">
-          ${cancelada ? 'Orden cancelada' : o.hora_preorden ? ' Lista a las ' + o.hora_preorden : ' Presenta tu gafete al llegar al comedor'}
+          ${cancelada ? 'Orden cancelada' : o.hora_preorden ? '⏰ Lista a las ' + o.hora_preorden : '🪪 Presenta tu gafete al llegar al comedor'}
         </div>
         ${o.platillos?.length ? `<div style="margin-bottom:.6rem">${o.platillos.map(p=>`<div style="font-size:.82rem;color:var(--g${cancelada?'3':'1'});padding:.1rem 0">• ${p}</div>`).join('')}</div>` : ''}
         ${!cancelada ? `<div style="background:var(--vl);border-radius:var(--rs);padding:.65rem;text-align:center;margin-bottom:.5rem"><div style="font-size:.78rem;font-weight:600;color:var(--v)">Tu gafete es tu acceso al comedor</div></div>` : ''}
@@ -1071,13 +1027,12 @@ function renderPedidos() {
       </div>`;
 
     if (!cancelada && o.hora_preorden) {
-        const btnU = document.createElement('button');
-        btnU.className = 'btn-fill';
-        btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
-        btnU.textContent = 'Usar ahora — cancela la hora y cocina empieza';
-        btnU.addEventListener('click', () => updateDoc(doc(db, 'ordenes', o.id), { hora_preorden: null, tipo: 'momento' }));
-        card.appendChild(btnU);
-      }
+      const btnU = document.createElement('button');
+      btnU.className = 'btn-fill';
+      btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
+      btnU.textContent = 'Usar ahora — cancela la hora y cocina empieza';
+      btnU.addEventListener('click', () => updateDoc(doc(db, 'ordenes', o.id), { hora_preorden: null, tipo: 'momento' }));
+      card.appendChild(btnU);
     }
     lista.appendChild(card);
   });
@@ -1141,27 +1096,5 @@ document.getElementById('btn-salir').addEventListener('click', async () => {
   document.getElementById('inp-pass').value = '';
 });
 </script>
-
-<script>
-document.getElementById('btn-login').addEventListener('click', function() {
-  var email = document.getElementById('inp-email').value.trim();
-  var pass = document.getElementById('inp-pass').value;
-  var err = document.getElementById('login-err');
-  var btn = document.getElementById('btn-login');
-  if (!email || !pass) { err.style.display='block'; err.textContent='Ingresa correo y contraseña'; return; }
-  if (!window._signIn || !window._auth) { err.style.display='block'; err.textContent='Cargando... intenta en un segundo'; return; }
-  err.style.display='none';
-  btn.textContent='Entrando...';
-  btn.disabled=true;
-  window._signIn(window._auth, email, pass)
-    .catch(function(e) {
-      err.style.display='block';
-      err.textContent = (e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found') ? 'Correo o contraseña incorrectos' : 'Error: '+e.message;
-      btn.textContent='Entrar';
-      btn.disabled=false;
-    });
-});
-</script>
-<script src="login.js"></script>
 </body>
 </html>
