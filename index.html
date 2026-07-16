@@ -464,25 +464,34 @@ function getDias() {
 // ── AUTH ──
 onAuthStateChanged(auth, async user => {
   if (!user) { pg('pg-login'); return; }
-  try {
-    perfil = await getPerfil(user.uid);
-    if (!perfil) { await signOut(auth); pg('pg-login'); return; }
+  let intentos = 0;
+  async function cargar() {
+    try {
+      perfil = await getPerfil(user.uid);
+    } catch(e) {
+      console.error('Error leyendo perfil de Firestore:', e);
+      if (intentos < 3) { intentos++; setTimeout(cargar, 1500); return; }
+      const err = document.getElementById('login-err');
+      if (err) { err.style.display = 'block'; err.textContent = 'No se pudo cargar tu perfil. Revisa tu conexión.'; }
+      pg('pg-login');
+      const btn = document.getElementById('btn-login');
+      if (btn) { btn.textContent = 'Entrar'; btn.disabled = false; }
+      return;
+    }
+    if (!perfil) {
+      const err = document.getElementById('login-err');
+      if (err) { err.style.display = 'block'; err.textContent = 'Tu usuario no tiene perfil registrado. Contacta al administrador.'; }
+      await signOut(auth);
+      pg('pg-login');
+      const btn = document.getElementById('btn-login');
+      if (btn) { btn.textContent = 'Entrar'; btn.disabled = false; }
+      return;
+    }
     if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
     if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
     iniciarApp();
-  } catch(e) {
-    console.error('Error cargando perfil:', e);
-    // Si falla Firestore, intentar de nuevo en 2 seg
-    setTimeout(async () => {
-      try {
-        perfil = await getPerfil(user.uid);
-        if (perfil) iniciarApp();
-      } catch(e2) {
-        await signOut(auth);
-        pg('pg-login');
-      }
-    }, 2000);
   }
+  cargar();
 });
 
 document.getElementById('btn-login').addEventListener('click', async () => {
@@ -512,16 +521,18 @@ document.getElementById('btn-login').addEventListener('click', async () => {
 
 // ── INICIAR APP ──
 async function iniciarApp() {
-  const n = perfil.nombre;
-  document.getElementById('top-nombre').textContent = n.split(' ')[0];
-  document.getElementById('sal-nombre').textContent = 'Hola, ' + n.split(' ')[0] + ' 👋';
-  document.getElementById('sal-fecha').textContent = 'Hoy es ' + fmtFecha(hoy());
-  document.getElementById('pf-nombre').textContent = n;
-  document.getElementById('pf-email').textContent = perfil.email;
-  document.getElementById('pf-av').textContent = n.split(' ').map(x => x[0]).slice(0,2).join('');
+  const n = perfil.nombre || 'Empleado';
+  const primerNombre = n.split(' ')[0];
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('top-nombre', primerNombre);
+  set('sal-nombre', 'Hola, ' + primerNombre);
+  set('sal-fecha', 'Hoy es ' + fmtFecha(hoy()));
+  set('pf-nombre', n);
+  set('pf-email', perfil.email || '');
+  set('pf-av', n.split(' ').map(x => x[0]).slice(0,2).join(''));
   pg('pg-emp');
-  suscribirOrdenes();
-  await cargarMenuHoy();
+  try { suscribirOrdenes(); } catch(e) { console.error('Error suscribir ordenes:', e); }
+  try { await cargarMenuHoy(); } catch(e) { console.error('Error cargar menu:', e); }
 }
 
 // ── SUSCRIBIR ÓRDENES EN TIEMPO REAL ──
