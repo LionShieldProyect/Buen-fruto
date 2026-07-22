@@ -461,658 +461,108 @@ function getDias() {
   return todos.filter(f => f >= hoy()); // solo hoy y futuros
 }
 
-// ── AUTH ──
-onAuthStateChanged(auth, async user => {
-  if (!user) { pg('pg-login'); return; }
-  let intentos = 0;
-  async function cargar() {
-    const errEl = document.getElementById('login-err');
-    const btnEl = document.getElementById('btn-login');
-    function mostrarDebug(msg) {
-      console.log('[BF]', msg);
-      if (errEl) { errEl.style.display='block'; errEl.style.background='#EAF4E8'; errEl.style.color='#2D5016'; errEl.textContent='Debug: ' + msg; }
-    }
-    mostrarDebug('Auth OK — leyendo perfil...');
-    try {
-      perfil = await getPerfil(user.uid);
-    } catch(e) {
-      mostrarDebug('Error Firestore: ' + e.message);
-      console.error('Error leyendo perfil de Firestore:', e);
-      if (intentos < 3) { intentos++; setTimeout(cargar, 1500); return; }
-      const err = document.getElementById('login-err');
-      if (err) { err.style.display = 'block'; err.textContent = 'No se pudo cargar tu perfil. Revisa tu conexión.'; }
-      pg('pg-login');
-      const btn = document.getElementById('btn-login');
-      if (btn) { btn.textContent = 'Entrar'; btn.disabled = false; }
-      return;
-    }
-    if (!perfil) {
-      mostrarDebug('Perfil null — UID: ' + user.uid);
-      const err = document.getElementById('login-err');
-      if (err) { err.style.display = 'block'; err.textContent = 'Tu usuario no tiene perfil registrado. Contacta al administrador.'; }
-      await signOut(auth);
-      pg('pg-login');
-      const btn = document.getElementById('btn-login');
-      if (btn) { btn.textContent = 'Entrar'; btn.disabled = false; }
-      return;
-    }
-    if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
-    if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
-    mostrarDebug('Perfil OK — iniciando app...');
-    iniciarApp();
+// ── LOGIN ──
+window.hacerLogin = function() {
+  var email = document.getElementById('inp-email').value.trim();
+  var pass  = document.getElementById('inp-pass').value;
+  var err   = document.getElementById('login-err');
+  var btn   = document.getElementById('btn-login');
+  if (!email || !pass) {
+    err.style.display = 'block';
+    err.style.background = '#FDEDEC';
+    err.style.color = '#C0392B';
+    err.textContent = 'Ingresa tu correo y contraseña';
+    return;
   }
-  cargar();
+  err.style.display = 'none';
+  btn.textContent = 'Entrando...';
+  btn.disabled = true;
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(function() {
+      // onAuthStateChanged se encarga del resto
+    })
+    .catch(function(e) {
+      err.style.display = 'block';
+      err.style.background = '#FDEDEC';
+      err.style.color = '#C0392B';
+      btn.textContent = 'Entrar';
+      btn.disabled = false;
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found') {
+        err.textContent = 'Correo o contraseña incorrectos';
+      } else if (e.code === 'auth/too-many-requests') {
+        err.textContent = 'Cuenta bloqueada temporalmente. Intenta en unos minutos.';
+      } else {
+        err.textContent = 'Error: ' + e.code;
+      }
+    });
+};
+
+document.getElementById('btn-login').addEventListener('click', window.hacerLogin);
+document.getElementById('inp-pass').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') window.hacerLogin();
 });
 
-document.getElementById('btn-login').addEventListener('click', async () => {
-  const email = document.getElementById('inp-email').value.trim();
-  const pass  = document.getElementById('inp-pass').value;
-  const err   = document.getElementById('login-err');
-  if (!email || !pass) { err.style.display = 'block'; err.textContent = 'Ingresa tu correo y contraseña'; return; }
-  err.style.display = 'none';
-  const btn = document.getElementById('btn-login');
-  btn.textContent = 'Entrando...'; btn.disabled = true;
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-  } catch(e) {
-    err.style.display = 'block';
-    if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
-      err.textContent = 'Correo o contraseña incorrectos';
-    } else if (e.code === 'auth/too-many-requests') {
-      err.textContent = 'Demasiados intentos. Espera un momento.';
-    } else if (e.code === 'auth/network-request-failed') {
-      err.textContent = 'Sin conexión. Verifica tu internet.';
-    } else {
-      err.textContent = 'Error: ' + e.message;
-    }
-    btn.textContent = 'Entrar'; btn.disabled = false;
+// ── AUTH STATE ──
+auth.onAuthStateChanged(function(user) {
+  if (!user) {
+    pg('pg-login');
+    var btn = document.getElementById('btn-login');
+    if (btn) { btn.textContent = 'Entrar'; btn.disabled = false; }
+    return;
   }
+  // Usuario autenticado — cargar perfil
+  db.collection('empleados').doc(user.uid).get()
+    .then(function(snap) {
+      if (!snap.exists) {
+        var err = document.getElementById('login-err');
+        if (err) {
+          err.style.display = 'block';
+          err.style.background = '#FDEDEC';
+          err.style.color = '#C0392B';
+          err.textContent = 'Tu usuario no está registrado como empleado. Contacta al administrador.';
+        }
+        auth.signOut();
+        pg('pg-login');
+        return;
+      }
+      perfil = snap.data();
+      if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
+      if (perfil.rol === 'chef')  { window.location.href = 'chef.html';  return; }
+      iniciarApp();
+    })
+    .catch(function(e) {
+      var err = document.getElementById('login-err');
+      if (err) {
+        err.style.display = 'block';
+        err.style.background = '#FDEDEC';
+        err.style.color = '#C0392B';
+        err.textContent = 'Error de conexión: ' + e.message;
+      }
+      pg('pg-login');
+    });
 });
 
 // ── INICIAR APP ──
 async function iniciarApp() {
-  const n = perfil.nombre || 'Empleado';
-  const primerNombre = n.split(' ')[0];
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('top-nombre', primerNombre);
-  set('sal-nombre', 'Hola, ' + primerNombre);
+  var n = perfil.nombre || 'Empleado';
+  var primer = n.split(' ')[0];
+  function set(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+  set('top-nombre', primer);
+  set('sal-nombre', 'Hola, ' + primer);
   set('sal-fecha', 'Hoy es ' + fmtFecha(hoy()));
   set('pf-nombre', n);
   set('pf-email', perfil.email || '');
-  set('pf-av', n.split(' ').map(x => x[0]).slice(0,2).join(''));
+  set('pf-av', n.split(' ').map(function(x){return x[0];}).slice(0,2).join(''));
   pg('pg-emp');
-  try { suscribirOrdenes(); } catch(e) { console.error('Error suscribir ordenes:', e); }
-  try { await cargarMenuHoy(); } catch(e) { console.error('Error cargar menu:', e); }
+  suscribirOrdenes();
+  await cargarMenuHoy();
 }
-
-// ── SUSCRIBIR ÓRDENES EN TIEMPO REAL ──
-function suscribirOrdenes() {
-  if (unsubOrdenes) unsubOrdenes();
-  const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid));
-  unsubOrdenes = onSnapshot(q, snap => {
-    ordenes = {};
-    const hoyStr = hoy();
-    snap.forEach(d => {
-      const data = d.data();
-      if (data.fecha < hoyStr) return; // solo hoy en adelante
-      const fecha = data.fecha;
-      const existente = ordenes[fecha];
-      // Si ya hay una orden activa para esta fecha, no la sobreescribas con una cancelada
-      if (existente && existente.estado !== 'cancelado' && data.estado === 'cancelado') return;
-      // Si la existente es activa y la nueva también es activa, quedarse con la más reciente
-      ordenes[fecha] = { id: d.id, ...data };
-    });
-    renderInicio();
-    if (document.getElementById('t-pedidos').style.display === 'block') renderPedidos();
-    renderDiasTabs();
-  });
-}
-
-// ── MENÚ HOY EN TIEMPO REAL ──
-let unsubMenuHoy = null;
-async function cargarMenuHoy() {
-  if (unsubMenuHoy) unsubMenuHoy();
-  unsubMenuHoy = onSnapshot(doc(db, 'menus', hoy()), snap => {
-    menuHoy = snap.exists ? snap.data() : null;
-    renderInicio();
-  });
-}
-
-function renderInicio() {
-  const cont = document.getElementById('inicio-contenido');
-  // Solo mostrar barcode si hay orden activa (no cancelada)
-  const ordenHoy = ordenes[hoy()];
-  const ordenActiva = ordenHoy && ordenHoy.estado !== 'cancelado' ? ordenHoy : null;
-
-  if (ordenActiva) {
-    const o = ordenActiva;
-    cont.innerHTML = `
-      <div class="bc-card">
-        <div class="bc-card-head">
-          <span class="bc-card-titulo">Pedido confirmado para hoy</span>
-          <span class="badge" style="background:rgba(255,255,255,.15);color:white;font-size:.67rem">${o.hora_preorden ? 'Pre-orden · ' + o.hora_preorden : 'Listo'}</span>
-        </div>
-        ${o.hora_preorden ? `<div class="bc-hora" style="display:block">⏰ Tu comida estará lista a las ${o.hora_preorden}</div>` : ''}
-        <div class="bc-body">
-          <div style="background:var(--vl);border-radius:var(--rs);padding:1.25rem;text-align:center;margin-bottom:.85rem">
-            <div style="font-size:2rem;margin-bottom:.5rem">🪪</div>
-            <div style="font-size:.9rem;font-weight:700;color:var(--v)">Presenta tu gafete al llegar al comedor</div>
-            <div style="font-size:.75rem;color:var(--g2);margin-top:.25rem">El chef escaneará tu gafete y empezará a preparar</div>
-          </div>
-          <div style="background:var(--crema);border-radius:var(--rs);padding:.75rem 1rem">
-            <div style="font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);margin-bottom:.4rem">Tu pedido</div>
-            ${(o.platillos||[]).map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.15rem 0">• ${p}</div>`).join('')}
-            ${(o.extras||[]).map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.15rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')}
-          </div>
-          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Cancelar la hora — llegó antes</button>` : ''}
-        </div>
-      </div>`;
-    return;
-  }
-
-  if (!menuHoy) {
-    cont.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><div class="empty-t">Sin menú disponible hoy</div><div class="empty-s">El administrador aún no ha publicado el menú de hoy</div></div>`;
-    return;
-  }
-
-  // Renderizar menú
-  buffetHoy = false; extrasHoy = []; platHoy = menuHoy.platillos?.slice() || [];
-  cont.innerHTML = `
-    <div class="card" id="card-hoy">
-      <div class="card-head"><span class="card-label">Menú de hoy</span><span class="badge badge-verde">Disponible</span></div>
-      <div class="card-bod">
-        <div class="plato-nombre">${menuHoy.nombre}</div>
-        <div class="subsidio"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>La empresa subsidia $45.00</div>
-        <div id="items-hoy"></div>
-        <div class="ticket" id="ticket-hoy"><div id="ticket-hoy-rows"></div></div>
-        <button class="btn-fill" id="btn-pedir-ahora" style="margin-top:.9rem">Pedir ahora</button>
-        <button class="btn-ghost" id="btn-preorden-hoy">Pre-ordenar para hoy — elige hora</button>
-      </div>
-    </div>`;
-
-  renderItems(document.getElementById('items-hoy'), menuHoy, 'H');
-  document.getElementById('btn-pedir-ahora').addEventListener('click', pedirAhora);
-  document.getElementById('btn-preorden-hoy').addEventListener('click', () => {
-    if (!buffetHoy && extrasHoy.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-    fechaModal = hoy(); idxModal = -1;
-    document.getElementById('modal-titulo').textContent = 'Pre-ordenar para hoy';
-    abrirModal();
-  });
-}
-
-// ── RENDERIZAR ITEMS (buffet + extras) ──
-function renderItems(cont, menu, modo) {
-  cont.innerHTML = '';
-  const bRow = document.createElement('div');
-  bRow.className = 'item item-buf';
-  bRow.innerHTML = `
-    <div class="item-buf-top">
-      <div class="item-buf-left">
-        <div class="check" style="margin-top:2px;background:transparent;border-color:var(--borde)"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></div>
-        <div><div class="item-buf-nom">Buffet completo</div><div class="item-buf-desc">${(menu.platillos||[]).join(' · ')}</div></div>
-      </div>
-      <div class="item-buf-precio"><div class="item-buf-tachado">$90</div><div class="item-buf-real">$45</div></div>
-    </div>`;
-
-  const sub = document.createElement('div');
-  sub.className = 'sub-pls';
-  (menu.platillos || []).forEach(pl => {
-    const pd = document.createElement('div');
-    pd.className = 'item on';
-    pd.innerHTML = `<div class="item-left"><div class="check" style="background:var(--v);border-color:var(--v)"><svg viewBox="0 0 12 12" style="opacity:1"><polyline points="2 6 5 9 10 3"/></svg></div><span class="item-nom">${pl}</span></div><span class="item-inc">incluido</span>`;
-    pd.addEventListener('click', e => {
-      e.stopPropagation();
-      const arr = modo === 'H' ? platHoy : platDet;
-      const idx = arr.indexOf(pl);
-      const sel = idx === -1;
-      if (sel) arr.push(pl); else arr.splice(idx, 1);
-      pd.classList.toggle('on', sel);
-      const chk = pd.querySelector('.check');
-      chk.style.background = sel ? 'var(--v)' : 'transparent';
-      chk.style.borderColor = sel ? 'var(--v)' : 'var(--borde)';
-      pd.querySelector('.check svg').style.opacity = sel ? '1' : '0';
-      // Si todos off, desmarcar buffet padre
-      if (sub.querySelectorAll('.item.on').length === 0) {
-        if (modo === 'H') buffetHoy = false; else buffetDet = false;
-        bRow.classList.remove('on');
-        const bc = bRow.querySelector('.check');
-        bc.style.background = 'transparent'; bc.style.borderColor = 'var(--borde)';
-        bc.querySelector('svg').style.opacity = '0';
-      }
-      actuTick(modo, menu);
-    });
-    sub.appendChild(pd);
-  });
-  bRow.appendChild(sub);
-
-  bRow.addEventListener('click', e => {
-    if (e.target.closest('.sub-pls')) return;
-    const sel = modo === 'H' ? !buffetHoy : !buffetDet;
-    if (modo === 'H') buffetHoy = sel; else buffetDet = sel;
-    bRow.classList.toggle('on', sel);
-    const bc = bRow.querySelector('.check');
-    bc.style.background = sel ? 'var(--v)' : 'transparent';
-    bc.style.borderColor = sel ? 'var(--v)' : 'var(--borde)';
-    bc.querySelector('svg').style.opacity = sel ? '1' : '0';
-    sub.style.display = sel ? 'block' : 'none';
-    if (sel) {
-      const arr = modo === 'H' ? menu.platillos||[] : menu.platillos||[];
-      if (modo === 'H') platHoy = [...arr]; else platDet = [...arr];
-      sub.querySelectorAll('.item').forEach(x => {
-        x.classList.add('on');
-        const ck = x.querySelector('.check');
-        ck.style.background = 'var(--v)'; ck.style.borderColor = 'var(--v)';
-        x.querySelector('.check svg').style.opacity = '1';
-      });
-    } else {
-      if (modo === 'H') platHoy = []; else platDet = [];
-    }
-    actuTick(modo, menu);
-  });
-
-  cont.appendChild(bRow);
-  const st = document.createElement('div');
-  st.className = 'sec-tit'; st.textContent = 'Extras con costo adicional';
-  cont.appendChild(st);
-
-  (menu.extras || []).forEach(ex => {
-    const d = document.createElement('div');
-    d.className = 'item';
-    d.innerHTML = `<div class="item-left"><div class="check" style="background:transparent;border-color:var(--borde)"><svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg></div><span class="item-nom">${ex.nombre}</span></div><span class="item-precio">+$${ex.precio}</span>`;
-    d.addEventListener('click', () => {
-      const arr = modo === 'H' ? extrasHoy : extrasDet;
-      const idx = arr.findIndex(x => x.nombre === ex.nombre);
-      const sel = idx === -1;
-      if (sel) arr.push(ex); else arr.splice(idx, 1);
-      d.classList.toggle('on', sel);
-      const ck = d.querySelector('.check');
-      ck.style.background = sel ? 'var(--v)' : 'transparent';
-      ck.style.borderColor = sel ? 'var(--v)' : 'var(--borde)';
-      d.querySelector('.check svg').style.opacity = sel ? '1' : '0';
-      actuTick(modo, menu);
-    });
-    cont.appendChild(d);
-  });
-}
-
-function actuTick(modo, menu) {
-  const buf = modo === 'H' ? buffetHoy : buffetDet;
-  const ext = modo === 'H' ? extrasHoy : extrasDet;
-  const pls = modo === 'H' ? platHoy : platDet;
-  const tk = document.getElementById('ticket-' + (modo === 'H' ? 'hoy' : 'det'));
-  const rows = document.getElementById('ticket-' + (modo === 'H' ? 'hoy' : 'det') + '-rows');
-  if (!buf && ext.length === 0) { if(tk) tk.style.display = 'none'; return; }
-  if(tk) { tk.style.display = 'block'; rows.innerHTML = mkTicketHTML(buf, ext, pls); }
-  const cg = calcCargo(buf, ext);
-  if (modo === 'H') {
-    const ba = document.getElementById('btn-pedir-ahora');
-    const bp = document.getElementById('btn-preorden-hoy');
-    if(ba) ba.textContent = `Pedir ahora — $${cg}.00`;
-    if(bp) bp.textContent = `Pre-ordenar para hoy — $${cg}.00`;
-  } else {
-    const ba = document.getElementById('btn-accion-dia');
-    if(ba && !ba.disabled) {
-      ba.textContent = `Pedir ahora — $${cg}.00`;
-    }
-  }
-}
-
-// ── PEDIR AHORA ──
-// Cancelar órdenes previas del mismo día para evitar duplicados
-async function cancelarOrdenesDelDia(fecha) {
-  const q = query(collection(db,'ordenes'), where('empleado_uid','==',auth.currentUser.uid));
-  const snap = await getDocs(q);
-  const promises = [];
-  snap.forEach(d => {
-    const data = d.data();
-    if (data.fecha === fecha && data.estado !== 'cancelado') {
-      promises.push(updateDoc(doc(db,'ordenes',d.id), {estado:'cancelado', cancelado_en:new Date()}));
-    }
-  });
-  await Promise.all(promises);
-}
-
-async function pedirAhora() {
-  if (!buffetHoy && extrasHoy.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-  // Cancelar cualquier orden previa del día
-  await cancelarOrdenesDelDia(hoy());
-  const cg = calcCargo(buffetHoy, extrasHoy);
-  const data = {
-    empleado_uid: auth.currentUser.uid,
-    empleado_nombre: perfil.nombre,
-    fecha: hoy(),
-    platillos: buffetHoy ? platHoy : [],
-    extras: extrasHoy, cargo: cg,
-    tipo: 'momento', hora_preorden: null,
-    estado: 'pagado', escaneado: false,
-    creado_en: serverTimestamp()
-  };
-  const ref = await addDoc(collection(db, 'ordenes'), data);
-  ordenes[hoy()] = { id: ref.id, ...data };
-  renderInicio(); renderDiasTabs();
-  mostrarConf(hoy(), null, cg, 'Llega al comedor y escanea tu gafete', buffetHoy, extrasHoy, platHoy);
-}
-
-window.usarAhora = async function(ordenId) {
-  await updateDoc(doc(db, 'ordenes', ordenId), { hora_preorden: null, tipo: 'momento' });
-};
-
-async function crearOrden(fecha, horaPreorden) {
-  if (!buffetHoy && extrasHoy.length === 0 && fecha === hoy()) return;
-  const bc = newBarcode();
-  const buf = fecha === hoy() ? buffetHoy : buffetDet;
-  const ext = fecha === hoy() ? extrasHoy : extrasDet;
-  const pls = fecha === hoy() ? platHoy : platDet;
-  const cg = calcCargo(buf, ext);
-  const data = {
-    empleado_uid: auth.currentUser.uid,
-    empleado_nombre: perfil.nombre,
-    fecha,
-    barcode: bc,
-    platillos: buf ? pls : [],
-    extras: ext,
-    cargo: cg,
-    tipo: horaPreorden ? 'preorden' : 'momento',
-    hora_preorden: horaPreorden || null,
-    estado: 'pagado',
-    escaneado: false,
-    creado_en: serverTimestamp()
-  };
-  const ref = await addDoc(collection(db, 'ordenes'), data);
-  mostrarConf(fecha, bc, cg, horaPreorden ? `Lista a las ${horaPreorden}` : 'Llegas, escaneas — cocina empieza', buf, ext, pls);
-}
-
-// ── MENÚ SEMANAL EN TIEMPO REAL ──
-const unsubMenus = [];
-async function cargarMenuSemana() {
-  document.getElementById('menu-det-contenido').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando menús...</div>';
-  const dias = getDias();
-  const d0 = new Date(dias[0]+'T12:00:00'), d4 = new Date(dias[4]+'T12:00:00');
-  document.getElementById('subtitulo-semana').textContent = `${d0.getDate()} de ${MS[d0.getMonth()]} – ${d4.getDate()} de ${MS[d4.getMonth()]}`;
-  // Cancelar suscripciones anteriores
-  unsubMenus.forEach(u => u());
-  unsubMenus.length = 0;
-  menusSemana = dias.map(f => ({ fecha: f, nombre: null }));
-  dias.forEach((f, i) => {
-    const unsub = onSnapshot(doc(db, 'menus', f), snap => {
-      menusSemana[i] = snap.exists ? { fecha: f, ...snap.data() } : { fecha: f, nombre: null };
-      renderDiasTabs();
-      if (diaIdx === i) selDia(i);
-    });
-    unsubMenus.push(unsub);
-  });
-}
-window.cargarMenuSemana = cargarMenuSemana;
-
-function renderDiasTabs() {
-  const wrap = document.getElementById('dias-tabs');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  const dias = getDias();
-  dias.forEach((f, i) => {
-    const d = new Date(f+'T12:00:00');
-    const tieneOrden = !!ordenes[f];
-    const btn = document.createElement('div');
-    btn.className = 'dia-tab' + (i === 0 ? ' on' : '');
-    btn.innerHTML = `<span class="dl">${DS[d.getDay()]}</span><span class="dn">${d.getDate()}</span><span class="dia-dot" style="background:${tieneOrden?'var(--v)':'transparent'}"></span>`;
-    btn.addEventListener('click', () => { diaIdx = i; selDia(i); });
-    wrap.appendChild(btn);
-  });
-}
-
-function selDia(i) {
-  document.querySelectorAll('.dia-tab').forEach((t, j) => t.classList.toggle('on', j === i));
-  const dias = getDias(), fecha = dias[i];
-  const menu = menusSemana[i];
-  const esHoy = fecha === hoy();
-  const tieneOrden = !!(ordenes[fecha] && ordenes[fecha].estado !== 'cancelado');
-  buffetDet = false; extrasDet = [];
-  if (menu) platDet = menu.platillos?.slice() || [];
-
-  const cont = document.getElementById('menu-det-contenido');
-  if (!menu || !menu.nombre) {
-    cont.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div class="empty-t">Sin menú para este día</div></div>`;
-    return;
-  }
-
-  cont.innerHTML = `
-    <div class="card">
-      <div class="card-head"><span class="card-label">${fmtFecha(fecha)}${esHoy?' — Hoy':''}</span><span class="badge badge-verde">Disponible</span></div>
-      <div class="card-bod">
-        <div class="plato-nombre">${menu.nombre}</div>
-        <div class="subsidio"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>La empresa subsidia $45.00</div>
-        <div id="items-det"></div>
-        <div class="ticket" id="ticket-det"><div id="ticket-det-rows"></div></div>
-        ${tieneOrden
-          ? `<button class="btn-fill" disabled style="margin-top:.9rem;background:var(--vl);color:var(--v)">✓ Ya ordenaste este día</button>`
-          : esHoy
-            ? `<button class="btn-fill" id="btn-accion-dia" style="margin-top:.9rem">Pedir ahora</button>
-               <button class="btn-ghost" id="btn-accion-hora">Pre-ordenar con hora — cocina lo prepara</button>`
-            : `<button class="btn-ghost" id="btn-accion-hora">Pre-ordenar con hora — cocina lo prepara</button>`
-        }
-      </div>
-    </div>`;
-
-  if (!tieneOrden) {
-    renderItems(document.getElementById('items-det'), menu, 'D');
-
-    // Pedir ahora — solo para hoy
-    document.getElementById('btn-accion-dia')?.addEventListener('click', async () => {
-      if (!buffetDet && extrasDet.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-      const cg = calcCargo(buffetDet, extrasDet);
-      const data = {
-        empleado_uid: auth.currentUser.uid,
-        empleado_nombre: perfil.nombre,
-        fecha, platillos: buffetDet ? platDet : [],
-        extras: extrasDet, cargo: cg,
-        tipo: 'momento', hora_preorden: null,
-        estado: 'pagado', escaneado: false,
-        creado_en: serverTimestamp()
-      };
-      const ref = await addDoc(collection(db, 'ordenes'), data);
-      ordenes[fecha] = { id: ref.id, ...data };
-      renderInicio(); renderDiasTabs();
-      mostrarConf(fecha, null, cg, 'Llega al comedor y escanea tu gafete', buffetDet, extrasDet, platDet);
-    });
-    document.getElementById('btn-accion-hora')?.addEventListener('click', () => {
-      if (!buffetDet && extrasDet.length === 0) { alert('Selecciona el buffet o un extra'); return; }
-      fechaModal = fecha; idxModal = i;
-      document.getElementById('modal-titulo').textContent = esHoy ? 'Pre-ordenar para hoy' : `Pre-ordenar para ${fmtFecha(fecha)}`;
-      abrirModal();
-    });
-  }
-}
-
-// ── MODAL ──
-const HORAS = ['2:00','2:15','2:30','2:45','3:00','3:15','3:30','3:45','4:00','4:15','4:30'];
-
-function horaEnMinutos(horaStr) {
-  const p = horaStr.replace(' pm','').split(':');
-  let h = parseInt(p[0]), m = parseInt(p[1]||0);
-  if (h !== 12) h += 12;
-  return h * 60 + m;
-}
-
-function abrirModal() {
-  horaModal = null;
-  const grid = document.getElementById('hora-grid'); grid.innerHTML = '';
-  const ahora = new Date();
-  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
-  const esFechaHoy = fechaModal === hoy();
-
-  let hayHorasDisponibles = false;
-  HORAS.forEach(h => {
-    const btn = document.createElement('button');
-    btn.className = 'hora-btn';
-    btn.textContent = h + ' pm';
-    // Bloquear horas pasadas solo si es hoy
-    const pasada = esFechaHoy && horaEnMinutos(h) <= ahoraMin;
-    if (pasada) {
-      btn.disabled = true;
-      btn.style.cssText = 'opacity:.35;cursor:not-allowed;text-decoration:line-through';
-    } else {
-      hayHorasDisponibles = true;
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.hora-btn').forEach(b => b.classList.remove('on'));
-        btn.classList.add('on');
-        horaModal = h + ' pm';
-      });
-    }
-    grid.appendChild(btn);
-  });
-
-  if (!hayHorasDisponibles) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--g2);font-size:.85rem;padding:1rem">Ya no hay horas disponibles para hoy</div>';
-  }
-  document.getElementById('modal-hora').classList.add('on');
-}
-function cerrarModal() { document.getElementById('modal-hora').classList.remove('on'); }
-document.getElementById('modal-hora').addEventListener('click', e => { if (e.target === document.getElementById('modal-hora')) cerrarModal(); });
-document.getElementById('btn-cerrar-modal').addEventListener('click', cerrarModal);
-
-async function procesarOrden(hora) {
-  const esHoy = fechaModal === hoy();
-  const buf = esHoy ? buffetHoy : buffetDet;
-  const ext = esHoy ? extrasHoy : extrasDet;
-  const pls = esHoy ? platHoy : platDet;
-  const cg = calcCargo(buf, ext);
-  if (cg === 0) { alert('Selecciona el buffet o un extra'); cerrarModal(); return; }
-  // Cancelar órdenes previas del mismo día
-  await cancelarOrdenesDelDia(fechaModal);
-  const data = {
-    empleado_uid: auth.currentUser.uid,
-    empleado_nombre: perfil.nombre,
-    fecha: fechaModal,
-    platillos: buf ? pls : [],
-    extras: ext, cargo: cg,
-    tipo: hora ? 'preorden' : 'momento',
-    hora_preorden: hora || null,
-    estado: 'pagado', escaneado: false,
-    creado_en: serverTimestamp()
-  };
-  const ref = await addDoc(collection(db, 'ordenes'), data);
-  ordenes[fechaModal] = { id: ref.id, ...data };
-  renderInicio(); renderDiasTabs();
-  mostrarConf(fechaModal, null, cg, hora ? `Lista a las ${hora}` : 'Llega al comedor y escanea tu gafete', buf, ext, pls);
-}
-
-document.getElementById('btn-conf-hora').addEventListener('click', async () => { if (!horaModal) { alert('Selecciona una hora'); return; } cerrarModal(); await procesarOrden(horaModal); });
-
-// ── CONFIRMACIÓN ──
-function mostrarConf(fecha, bc, cg, desc, buf, ext, pls) {
-  document.getElementById('conf-sub').textContent = `${fmtFecha(fecha)} · ${desc}`;
-  document.getElementById('conf-ticket').innerHTML = mkTicketHTML(buf||false, ext||[], pls||[]);
-  // Sin barcode — el gafete es la identificación
-  const bcDiv = document.getElementById('conf-bc-svg');
-  bcDiv.innerHTML = '<div style="text-align:center;padding:1rem;background:var(--vl);border-radius:var(--rs)"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--v)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:.5rem"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/></svg><div style="font-size:.82rem;font-weight:700;color:var(--v)">Presenta tu gafete al llegar</div></div>';
-  document.getElementById('conf-bc-num').textContent = '';
-  document.getElementById('overlay-conf').classList.add('on');
-}
-document.getElementById('btn-conf-ok').addEventListener('click', () => {
-  document.getElementById('overlay-conf').classList.remove('on');
-  irTab('t-inicio', document.getElementById('nb-inicio'));
-});
-
-// ── PEDIDOS ──
-function renderPedidos() {
-  const lista = document.getElementById('pedidos-lista');
-  const keys = Object.keys(ordenes);
-  if (!keys.length) {
-    lista.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><div class="empty-t">Sin pedidos activos</div><div class="empty-s">Tus códigos aparecerán aquí</div></div>';
-    return;
-  }
-  lista.innerHTML = '';
-  keys.sort().reverse().forEach(fecha => {
-    const o = ordenes[fecha];
-    const cancelada = o.estado === 'cancelado';
-    const card = document.createElement('div');
-    card.className = 'pedido-card';
-    card.style.cssText = cancelada ? 'opacity:.45;border-left-color:var(--g3)' : '';
-    card.innerHTML = `
-      <div class="pedido-head">
-        <span class="pedido-fecha">${fmtFecha(fecha)}</span>
-        ${cancelada
-          ? '<span class="badge badge-gris">Cancelada</span>'
-          : `<span class="badge ${o.hora_preorden ? 'badge-ciruela' : 'badge-verde'}">${o.hora_preorden ? 'Pre-orden' : 'Al llegar'}</span>`}
-      </div>
-      <div class="pedido-body">
-        <div class="pedido-tipo" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">
-          ${cancelada ? 'Orden cancelada' : o.hora_preorden ? '⏰ Lista a las ' + o.hora_preorden : '🪪 Presenta tu gafete al llegar al comedor'}
-        </div>
-        ${o.platillos?.length ? `<div style="margin-bottom:.6rem">${o.platillos.map(p=>`<div style="font-size:.82rem;color:var(--g${cancelada?'3':'1'});padding:.1rem 0">• ${p}</div>`).join('')}</div>` : ''}
-        ${!cancelada ? `<div style="background:var(--vl);border-radius:var(--rs);padding:.65rem;text-align:center;margin-bottom:.5rem"><div style="font-size:.78rem;font-weight:600;color:var(--v)">Tu gafete es tu acceso al comedor</div></div>` : ''}
-      </div>
-      <div class="pedido-footer">
-        <span class="pedido-total-lbl">${cancelada ? 'No cobrado' : 'Total pagado'}</span>
-        <span class="pedido-total-val" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">$${o.cargo}.00</span>
-      </div>`;
-
-    if (!cancelada && o.hora_preorden) {
-      const btnU = document.createElement('button');
-      btnU.className = 'btn-fill';
-      btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
-      btnU.textContent = 'Usar ahora — cancela la hora y cocina empieza';
-      btnU.addEventListener('click', () => updateDoc(doc(db, 'ordenes', o.id), { hora_preorden: null, tipo: 'momento' }));
-      card.appendChild(btnU);
-    }
-    lista.appendChild(card);
-  });
-}
-window.renderPedidos = renderPedidos;
-
-// ── HISTORIAL ──
-let unsubHistorial = null;
-function cargarHistorial() {
-  document.getElementById('hist-lista').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando historial...</div>';
-  if (unsubHistorial) unsubHistorial();
-  const q = query(collection(db, 'ordenes'), where('empleado_uid', '==', auth.currentUser.uid));
-  unsubHistorial = onSnapshot(q, snap => {
-    const lista = document.getElementById('hist-lista');
-    const porMes = {};
-    snap.forEach(d => {
-      const h = d.data();
-      if (h.estado === 'cancelado') return; // NUNCA mostrar canceladas
-      const dt = new Date(h.fecha+'T12:00:00');
-      const mk = dt.getFullYear()+'-'+dt.getMonth();
-      if (!porMes[mk]) porMes[mk] = { label: MF[dt.getMonth()]+' '+dt.getFullYear(), sems: {}, total: 0, dias: 0 };
-      porMes[mk].total += h.cargo; porMes[mk].dias++;
-      const ns = Math.min(Math.ceil(dt.getDate()/7), 4);
-      const sk = mk+'-'+ns;
-      if (!porMes[mk].sems[sk]) porMes[mk].sems[sk] = { num: ns, items: [], total: 0 };
-      porMes[mk].sems[sk].items.push(h); porMes[mk].sems[sk].total += h.cargo;
-    });
-    if (!Object.keys(porMes).length) { lista.innerHTML = '<div class="empty"><div class="empty-t">Sin comidas registradas</div></div>'; return; }
-    let html = '';
-    Object.values(porMes).sort((a,b)=>b.label.localeCompare(a.label)).forEach(mes => {
-      html += `<div class="mes-bloque"><div class="mes-head"><div class="mes-nombre">${mes.label}</div><div class="mes-right"><div class="mes-dias">${mes.dias} comidas</div><div class="mes-gasto">−$${mes.total}</div></div></div>`;
-      Object.values(mes.sems).sort((a,b)=>a.num-b.num).forEach(sem => {
-        html += `<div class="sem-bloque"><div class="sem-head"><div class="sem-num">${sem.num}</div><div class="sem-label">Semana ${sem.num}</div><div class="sem-total">−$${sem.total}</div></div>`;
-        sem.items.sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(h => {
-          const d = new Date(h.fecha+'T12:00:00');
-          html += `<div class="hist-row"><div><div class="hist-dia">${DS[d.getDay()]} ${d.getDate()} de ${MS[d.getMonth()]}</div><div class="hist-plato">${h.platillos?.join(', ')||'Solo extras'}${h.extras?.length?' + extras':''}</div></div><div class="hist-monto">−$${h.cargo}</div></div>`;
-        });
-        html += `</div>`;
-      });
-      html += `</div>`;
-    });
-    lista.innerHTML = html;
-  });
-}
-window.cargarHistorial = cargarHistorial;
-
-// ── BARCODE FULLSCREEN ──
-function agrandarBC(tok) { } // ya no se usa — sistema de gafetes
-function cerrarBC() {
-  document.getElementById('bc-full').style.display = 'none';
-}
-document.getElementById('bc-full').addEventListener('click', cerrarBC);
 
 // ── CERRAR SESIÓN ──
-document.getElementById('btn-salir').addEventListener('click', async () => {
+document.getElementById('btn-salir').addEventListener('click', function() {
   if (unsubOrdenes) unsubOrdenes();
-  await signOut(auth);
-  pg('pg-login');
-  document.getElementById('btn-login').textContent = 'Entrar';
+  if (unsubHistorial) unsubHistorial();
+  auth.signOut();
   document.getElementById('inp-email').value = '';
   document.getElementById('inp-pass').value = '';
 });
