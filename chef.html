@@ -779,8 +779,12 @@ setInterval(()=>{ if(cola.length) render(); }, 30000);
 // Revisar cada minuto si alguna pre-orden llegó a su hora
 setInterval(()=> { if(cola.length || true) suscribirOrdenes(); }, 60000);
 
-// Iniciar inmediatamente al cargar
-suscribirOrdenes();
+// Autenticar anónimamente para acceder a Firestore
+auth.signInAnonymously()
+  .then(() => suscribirOrdenes())
+  .catch(() => suscribirOrdenes());
+
+
 </script>
 
 </body>
