@@ -120,6 +120,9 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 .btn-outline:hover{background:var(--vl)}
 .btn-danger{background:var(--rojol);color:var(--rojo)}
 .btn-danger:hover{background:#fbd9d6}
+.periodo-btn.active{background:var(--v)!important;color:#fff!important;border-color:var(--v)!important}
+.btn-elim{background:#FDE8E8;color:#C0392B;border:none;border-radius:6px;padding:.3rem .65rem;font-size:.75rem;font-weight:700;cursor:pointer}
+.btn-elim:hover{background:#C0392B;color:#fff}
 .btn-sm{padding:.45rem .85rem;font-size:.78rem}
 
 /* INPUTS */
@@ -392,13 +395,29 @@ input[type=file]{display:none}
       <!-- REPORTES -->
       <div class="seccion" id="sec-reportes">
         <div class="sec-titulo">Reportes</div>
-        <div class="sec-sub">Reporte semanal de consumo — desglosado por empleado y día.</div>
+        <div class="sec-sub">Reporte de consumo — desglosado por empleado y día.</div>
+
+        <!-- Selector de período -->
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+          <button class="btn btn-outline btn-sm periodo-btn active" onclick="setPeriodo('semana-actual')">Esta semana</button>
+          <button class="btn btn-outline btn-sm periodo-btn" onclick="setPeriodo('semana-pasada')">Semana pasada</button>
+          <button class="btn btn-outline btn-sm periodo-btn" onclick="setPeriodo('mes-actual')">Este mes</button>
+          <button class="btn btn-outline btn-sm periodo-btn" onclick="setPeriodo('mes-1')">Mes pasado</button>
+          <button class="btn btn-outline btn-sm periodo-btn" onclick="setPeriodo('mes-2')">Hace 2 meses</button>
+          <button class="btn btn-outline btn-sm periodo-btn" onclick="setPeriodo('mes-3')">Hace 3 meses</button>
+        </div>
+
         <div class="card">
           <div class="card-head">
-            <span class="card-titulo" id="reporte-rango">Semana —</span>
-            <button class="btn btn-outline btn-sm" onclick="exportarCSV()">
-              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV
-            </button>
+            <span class="card-titulo" id="reporte-rango">—</span>
+            <div style="display:flex;gap:.5rem">
+              <button class="btn btn-outline btn-sm" onclick="exportarCSV()">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar CSV
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="exportarCSVCompleto()" title="Respaldo completo de todos los datos">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Respaldo completo
+              </button>
+            </div>
           </div>
           <div class="card-body" id="reporte-body" style="padding:1.5rem">
             <div class="loading" id="loading-reporte" style="display:flex"><div class="spinner"></div>&nbsp;Calculando reporte...</div>
@@ -991,7 +1010,10 @@ async function cargarOrdenesHoy(){
         <td>${o.hora_preorden?'<span class="badge badge-c">⏰ '+o.hora_preorden+'</span>':'<span class="badge badge-v">Al llegar</span>'}</td>
         <td style="font-weight:700">$${o.cargo}</td>
         <td>${cancelada?'<span class="badge badge-r">Cancelada</span>':o.estado==='lista'?'<span class="badge badge-v">✓ Lista</span>':o.escaneado?'<span class="badge badge-v">Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}</td>
-        <td>${cancelada?'—':`<button class="btn btn-danger btn-sm" onclick="cancelarOrdenAdmin('${o.id}')">Cancelar</button>`}</td>`;
+        <td style="display:flex;gap:.3rem;flex-wrap:wrap">
+          ${cancelada?'':`<button class="btn btn-danger btn-sm" onclick="cancelarOrdenAdmin('${o.id}')">Cancelar</button>`}
+          <button class="btn-elim" onclick="eliminarOrdenAdmin('${o.id}','${(o.empleado_nombre||'').replace(/'/g,"\\'")}','${o.fecha}')">Eliminar</button>
+        </td>`;
       tbody.appendChild(tr);
     });
   });
@@ -1008,17 +1030,85 @@ const DS_R = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const MS_R = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MF_R = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// ── PERÍODO DE REPORTE ──
+let _periodoActual = 'semana-actual';
+
+function setPeriodo(p) {
+  _periodoActual = p;
+  document.querySelectorAll('.periodo-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  cargarReporte();
+}
+
+function getRango() {
+  const hoyD = new Date();
+  let desde, hasta;
+  if (_periodoActual === 'semana-actual') {
+    desde = getDias()[0]; hasta = getDias()[getDias().length-1];
+  } else if (_periodoActual === 'semana-pasada') {
+    const lun = new Date(getDias()[0]+'T12:00:00');
+    lun.setDate(lun.getDate()-7);
+    const vie = new Date(lun); vie.setDate(lun.getDate()+4);
+    desde = lun.toISOString().slice(0,10); hasta = vie.toISOString().slice(0,10);
+  } else {
+    const meses = {
+      'mes-actual': 0, 'mes-1': 1, 'mes-2': 2, 'mes-3': 3
+    };
+    const offset = meses[_periodoActual] || 0;
+    const d = new Date(hoyD.getFullYear(), hoyD.getMonth() - offset, 1);
+    const fin = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    desde = d.toISOString().slice(0,10); hasta = fin.toISOString().slice(0,10);
+  }
+  return { desde, hasta };
+}
+
+window.eliminarOrdenAdmin = async function(id, nombre, fecha) {
+  if (!confirm(`¿Eliminar definitivamente la orden de ${nombre} del ${fecha}?\n\nEsta acción NO se puede deshacer.`)) return;
+  try {
+    await db.collection('ordenes').doc(id).delete();
+  } catch(e) { alert('Error al eliminar: ' + e.message); }
+};
+
+window.exportarCSVCompleto = async function() {
+  const snap = await getDocs(collection(db,'ordenes'));
+  const filas = ['\uFEFFEmpleado,Fecha,Platillos,Extras,Cargo empleado,Subsidio empresa,Total,Estado,Tipo,Escaneado'];
+  snap.forEach(d => {
+    const o = d.data();
+    const extras = (o.extras||[]).map(e=>typeof e==='string'?e:(e.nombre+' $'+e.precio)).join(' | ');
+    filas.push([
+      '"'+(o.empleado_nombre||'')+'"',
+      o.fecha||'',
+      '"'+(o.platillos||[]).join(', ')+'"',
+      '"'+extras+'"',
+      o.cargo||0,
+      45,
+      (o.cargo||0)+45,
+      o.estado||'',
+      o.hora_preorden?'preorden':'momento',
+      o.escaneado?'sí':'no'
+    ].join(','));
+  });
+  const blob = new Blob([filas.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='respaldo_completo_buen_fruto_'+hoy()+'.csv'; a.click();
+};
+
 async function cargarReporte(){
   const body = document.getElementById('reporte-body');
   body.innerHTML = '<div class="loading" style="display:flex"><div class="spinner"></div>&nbsp;Calculando reporte...</div>';
 
-  const lunes   = getDias()[0];
-  const viernes = getDias()[4];
-  const d0 = new Date(lunes+'T12:00:00'), d4 = new Date(viernes+'T12:00:00');
-  document.getElementById('reporte-rango').textContent =
-    'Semana del '+d0.getDate()+' de '+MS_R[d0.getMonth()]+' al '+d4.getDate()+' de '+MS_R[d4.getMonth()];
+  const { desde, hasta } = getRango();
+  const d0 = new Date(desde+'T12:00:00'), d1 = new Date(hasta+'T12:00:00');
+  const labels = {
+    'semana-actual':'Semana del','semana-pasada':'Semana del',
+    'mes-actual':'Mes de','mes-1':'Mes de','mes-2':'Mes de','mes-3':'Mes de'
+  };
+  const esSemana = _periodoActual.startsWith('semana');
+  document.getElementById('reporte-rango').textContent = esSemana
+    ? 'Semana del '+d0.getDate()+' de '+MS_R[d0.getMonth()]+' al '+d1.getDate()+' de '+MS_R[d1.getMonth()]
+    : MS_R[d0.getMonth()]+' '+d0.getFullYear();
 
-  const q = query(collection(db,'ordenes'), where('fecha','>=',lunes), where('fecha','<=',viernes), orderBy('fecha'));
+  const q = query(collection(db,'ordenes'), where('fecha','>=',desde), where('fecha','<=',hasta), orderBy('fecha'));
   const snap = await getDocs(q);
 
   // Agrupar por empleado
