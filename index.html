@@ -401,7 +401,13 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 
 
 
-function hoy() { return new Date().toISOString().slice(0,10); }
+function hoy() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function fmtFecha(f) {
   const DS2=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const MS2=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];

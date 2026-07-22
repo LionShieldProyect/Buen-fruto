@@ -57,7 +57,10 @@ function query(colRef) {
 }
 
 // Helpers de fecha (compartidos)
-function hoy() { return new Date().toISOString().slice(0, 10); }
+function hoy() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function fmtFecha(f) {
   var DS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   var MS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
