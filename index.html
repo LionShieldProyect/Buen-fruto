@@ -593,10 +593,21 @@ function suscribirOrdenes() {
 let unsubMenuHoy = null;
 async function cargarMenuHoy() {
   if (unsubMenuHoy) unsubMenuHoy();
-  unsubMenuHoy = onSnapshot(doc(db, 'menus', hoy()), snap => {
+  // Cargar inmediatamente con getDoc para no depender del onSnapshot
+  try {
+    const snap = await db.collection('menus').doc(hoy()).get();
     menuHoy = snap.exists ? snap.data() : null;
     renderInicio();
-  });
+    renderDiasTabs();
+  } catch(e) {
+    console.error('Error cargando menú:', e);
+    renderInicio();
+  }
+  // Además suscribir para actualizaciones en tiempo real
+  unsubMenuHoy = db.collection('menus').doc(hoy()).onSnapshot(snap => {
+    menuHoy = snap.exists ? snap.data() : null;
+    renderInicio();
+  }, err => console.error('onSnapshot menú error:', err));
 }
 
 function renderInicio() {
