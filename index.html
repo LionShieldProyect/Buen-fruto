@@ -637,7 +637,7 @@ function renderInicio() {
             ${(o.platillos||[]).map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.15rem 0">• ${p}</div>`).join('')}
             ${(o.extras||[]).map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.15rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')}
           </div>
-          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Cancelar pre-orden agendada — escanear gafete al llegar</button>` : ''}
+          ${o.hora_preorden && o.fecha === hoy() ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Cancelar pre-orden agendada — escanear gafete al llegar</button>` : ''}
         </div>
       </div>`;
     return;
@@ -1080,7 +1080,7 @@ function renderPedidos() {
         <span class="pedido-total-val" style="${cancelada?'color:var(--g3);text-decoration:line-through':''}">$${o.cargo}.00</span>
       </div>`;
 
-    if (!cancelada && o.hora_preorden) {
+    if (!cancelada && o.hora_preorden && o.fecha === hoy()) {
       const btnU = document.createElement('button');
       btnU.className = 'btn-fill';
       btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
