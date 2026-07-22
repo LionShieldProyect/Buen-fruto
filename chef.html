@@ -453,13 +453,11 @@ scanInput.addEventListener('input', () => {
 });
 
 async function procesarScan(code) {
-  // DEBUG — mostrar en pantalla grande
   document.getElementById('debug-scan').textContent = 'Código: ' + code;
   document.getElementById('debug-scan').style.display = 'block';
 
-  // Buscar empleado por código de gafete
-  const qEmp = query(collection(db,'empleados'), where('codigo_gafete','==',code));
-  const empSnap = await getDocs(qEmp);
+  // Buscar empleado por código de gafete — API compat directa
+  const empSnap = await db.collection('empleados').where('codigo_gafete','==',code).get();
 
   if (empSnap.empty) {
     mostrarScanOverlay('error','Gafete inválido','','No se encontró ningún empleado con este código');
@@ -469,14 +467,13 @@ async function procesarScan(code) {
   const empDoc = empSnap.docs[0];
   const emp = empDoc.data();
 
-  // Buscar orden activa del empleado para hoy — filtro en cliente
-  const qOrd = query(collection(db,'ordenes'), where('empleado_uid','==',empDoc.id));
-  const ordSnap = await getDocs(qOrd);
-
+  // Buscar órdenes del empleado y filtrar por fecha local
+  const ordSnap = await db.collection('ordenes').where('empleado_uid','==',empDoc.id).get();
   const ordenes = [];
+  const fechaHoy = hoy();
   ordSnap.forEach(d => {
     const data = d.data();
-    if (data.fecha === hoy() && data.estado !== 'cancelado') ordenes.push({id:d.id,...data});
+    if (data.fecha === fechaHoy && data.estado !== 'cancelado') ordenes.push({id:d.id,...data});
   });
 
   if (!ordenes.length) {
@@ -491,7 +488,7 @@ async function procesarScan(code) {
     return;
   }
 
-  await updateDoc(doc(db,'ordenes',orden.id),{ escaneado:true, escaneado_en:new Date() });
+  await db.collection('ordenes').doc(orden.id).update({ escaneado:true, escaneado_en:new Date() });
 
   mostrarScanOverlay(
     'ok','¡Bienvenido!', emp.nombre,
@@ -546,10 +543,7 @@ document.getElementById('scan-overlay').addEventListener('click', () => {
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
 function suscribirOrdenes() {
-  const q = query(
-    collection(db, 'ordenes'),
-    where('fecha', '==', hoy())
-  );
+  const q = db.collection('ordenes').where('fecha', '==', hoy());
   onSnapshot(q, snap => {
     const todasHoy = [];
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
