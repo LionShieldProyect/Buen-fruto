@@ -497,9 +497,18 @@ window.hacerLogin = function() {
     });
 };
 
-document.getElementById('btn-login').addEventListener('click', window.hacerLogin);
-document.getElementById('inp-pass').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') window.hacerLogin();
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-login').addEventListener('click', window.hacerLogin);
+  document.getElementById('inp-pass').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') window.hacerLogin();
+  });
+  document.getElementById('btn-salir').addEventListener('click', function() {
+    if (unsubOrdenes) unsubOrdenes();
+    if (unsubHistorial) unsubHistorial();
+    auth.signOut();
+    document.getElementById('inp-email').value = '';
+    document.getElementById('inp-pass').value = '';
+  });
 });
 
 // ── AUTH STATE ──
@@ -558,14 +567,7 @@ async function iniciarApp() {
   await cargarMenuHoy();
 }
 
-// ── CERRAR SESIÓN ──
-document.getElementById('btn-salir').addEventListener('click', function() {
-  if (unsubOrdenes) unsubOrdenes();
-  if (unsubHistorial) unsubHistorial();
-  auth.signOut();
-  document.getElementById('inp-email').value = '';
-  document.getElementById('inp-pass').value = '';
-});
+// ── CERRAR SESIÓN — manejado en DOMContentLoaded arriba ──
 </script>
 </body>
 </html>
