@@ -637,7 +637,7 @@ function renderInicio() {
             ${(o.platillos||[]).map(p=>`<div style="font-size:.82rem;color:var(--g1);padding:.15rem 0">• ${p}</div>`).join('')}
             ${(o.extras||[]).map(e=>`<div style="font-size:.82rem;color:var(--naranja);font-weight:600;padding:.15rem 0">• ${e.nombre} (+$${e.precio})</div>`).join('')}
           </div>
-          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Cancelar la hora — llegó antes</button>` : ''}
+          ${o.hora_preorden ? `<button class="btn-ghost" style="margin-top:.75rem" onclick="usarAhora('${o.id}')">Cancelar pre-orden agendada — escanear gafete al llegar</button>` : ''}
         </div>
       </div>`;
     return;
@@ -1084,7 +1084,7 @@ function renderPedidos() {
       const btnU = document.createElement('button');
       btnU.className = 'btn-fill';
       btnU.style.cssText = 'display:block;margin:.25rem 1.1rem 1.1rem;width:calc(100% - 2.2rem);font-size:.82rem;padding:.7rem';
-      btnU.textContent = 'Usar ahora — cancela la hora y cocina empieza';
+      btnU.textContent = 'Cancelar pre-orden agendada — escanear gafete al llegar';
       btnU.addEventListener('click', () => updateDoc(doc(db, 'ordenes', o.id), { hora_preorden: null, tipo: 'momento' }));
       card.appendChild(btnU);
     }
