@@ -394,7 +394,7 @@ html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="fb-compat.js"></script>
+<script src="fb-compat.js?v=3"></script>
 
 <script>
 // ==== LOGICA DE LA APP ====
@@ -599,21 +599,16 @@ function suscribirOrdenes() {
 let unsubMenuHoy = null;
 async function cargarMenuHoy() {
   if (unsubMenuHoy) unsubMenuHoy();
-  // Cargar inmediatamente con getDoc para no depender del onSnapshot
-  try {
-    const snap = await db.collection('menus').doc(hoy()).get();
-    menuHoy = snap.exists ? snap.data() : null;
-    renderInicio();
-    renderDiasTabs();
-  } catch(e) {
-    console.error('Error cargando menú:', e);
-    renderInicio();
-  }
-  // Además suscribir para actualizaciones en tiempo real
+  // onSnapshot directo sobre compat — más confiable que getDoc para tiempo real
   unsubMenuHoy = db.collection('menus').doc(hoy()).onSnapshot(snap => {
     menuHoy = snap.exists ? snap.data() : null;
     renderInicio();
-  }, err => console.error('onSnapshot menú error:', err));
+    renderDiasTabs();
+  }, err => {
+    console.error('Error menú:', err);
+    menuHoy = null;
+    renderInicio();
+  });
 }
 
 function renderInicio() {
