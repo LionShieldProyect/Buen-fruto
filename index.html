@@ -466,9 +466,17 @@ onAuthStateChanged(auth, async user => {
   if (!user) { pg('pg-login'); return; }
   let intentos = 0;
   async function cargar() {
+    const errEl = document.getElementById('login-err');
+    const btnEl = document.getElementById('btn-login');
+    function mostrarDebug(msg) {
+      console.log('[BF]', msg);
+      if (errEl) { errEl.style.display='block'; errEl.style.background='#EAF4E8'; errEl.style.color='#2D5016'; errEl.textContent='Debug: ' + msg; }
+    }
+    mostrarDebug('Auth OK — leyendo perfil...');
     try {
       perfil = await getPerfil(user.uid);
     } catch(e) {
+      mostrarDebug('Error Firestore: ' + e.message);
       console.error('Error leyendo perfil de Firestore:', e);
       if (intentos < 3) { intentos++; setTimeout(cargar, 1500); return; }
       const err = document.getElementById('login-err');
@@ -479,6 +487,7 @@ onAuthStateChanged(auth, async user => {
       return;
     }
     if (!perfil) {
+      mostrarDebug('Perfil null — UID: ' + user.uid);
       const err = document.getElementById('login-err');
       if (err) { err.style.display = 'block'; err.textContent = 'Tu usuario no tiene perfil registrado. Contacta al administrador.'; }
       await signOut(auth);
@@ -489,6 +498,7 @@ onAuthStateChanged(auth, async user => {
     }
     if (perfil.rol === 'admin') { window.location.href = 'admin.html'; return; }
     if (perfil.rol === 'chef') { window.location.href = 'chef.html'; return; }
+    mostrarDebug('Perfil OK — iniciando app...');
     iniciarApp();
   }
   cargar();
