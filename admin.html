@@ -515,13 +515,12 @@ document.getElementById('btn-login').addEventListener('click', async()=>{
   try{ await auth.signInWithEmailAndPassword(e,p); }
   catch(ex){ err.style.display='block'; err.textContent='Correo o contraseña incorrectos'; document.getElementById('btn-login').textContent='Entrar'; }
 });
-});
-
 document.getElementById('btn-salir').addEventListener('click', async()=>{
   if(unsubOrdenes)unsubOrdenes();
   if(unsubEmpleados)unsubEmpleados();
   await signOut(auth); showLogin();
   document.getElementById('btn-login').textContent='Entrar';
+});
 });
 
 // ── INICIAR ──
