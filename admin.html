@@ -470,7 +470,7 @@ const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','
 const MS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-function hoy(){ return new Date().toISOString().slice(0,10); }
+function hoy(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtF(f){ const d=new Date(f+'T12:00:00'); return DS[d.getDay()]+' '+d.getDate()+' de '+MS[d.getMonth()]; }
 function getDias(){
   const h=new Date(),dia=h.getDay(),lun=new Date(h);
@@ -541,8 +541,8 @@ window.irSec=function(sec,el){
 // ── DASHBOARD ──
 async function cargarDashboard(){
   if(unsubOrdenes)unsubOrdenes();
-  const q=query(collection(db,'ordenes'),where('fecha','==',hoy()));
-  unsubOrdenes=onSnapshot(q,snap=>{
+  const q=db.collection('ordenes').where('fecha','==',hoy());
+  unsubOrdenes=q.onSnapshot(snap=>{
     const ordenes=[];
     snap.forEach(d=>{ if(d.data().estado!=='cancelado') ordenes.push({id:d.id,...d.data()}); });
     const preordenes=ordenes.filter(o=>o.hora_preorden);
@@ -567,7 +567,7 @@ async function cargarDashboard(){
       </tr>`).join('');
   });
   // Empleados count
-  const empSnap=await getDocs(collection(db,'empleados'));
+  const empSnap=await db.collection('empleados').get();
   document.getElementById('m-empleados').textContent=empSnap.size;
 }
 
@@ -582,7 +582,7 @@ function generarCodigoGafete() {
 
 async function cargarEmpleados(){
   if(unsubEmpleados)unsubEmpleados();
-  unsubEmpleados=onSnapshot(collection(db,'empleados'),snap=>{
+  unsubEmpleados=db.collection('empleados').onSnapshot(snap=>{
     document.getElementById('loading-emp').style.display='none';
     const tbody=document.getElementById('tabla-empleados');
     if(snap.empty){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--g3)">Sin empleados registrados</td></tr>'; return; }
@@ -892,7 +892,7 @@ async function cargarMenuFecha(fecha) {
   if(unsubMenu) unsubMenu();
 
   // onSnapshot para actualizarse en tiempo real
-  unsubMenu = onSnapshot(doc(db,'menus',fecha), snap => {
+  unsubMenu = db.collection('menus').doc(fecha).onSnapshot(snap => {
     const menu = snap.exists ? snap.data() : null;
     renderMenuEditor(fecha, menu);
   });
@@ -986,8 +986,8 @@ window.borrarMenu=async function(){
 async function cargarOrdenesHoy(){
   document.getElementById('loading-ordenes').style.display='none';
   document.getElementById('ordenes-fecha').textContent='Todas las órdenes activas y futuras';
-  const q=query(collection(db,'ordenes'),where('fecha','>=',hoy()));
-  onSnapshot(q, snap=>{
+  const q = db.collection('ordenes').where('fecha','>=',hoy());
+  q.onSnapshot(snap=>{
     const docs=[];
     snap.forEach(d=>docs.push({id:d.id,...d.data()}));
     docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
@@ -1070,7 +1070,7 @@ window.eliminarOrdenAdmin = async function(id, nombre, fecha) {
 };
 
 window.exportarCSVCompleto = async function() {
-  const snap = await getDocs(collection(db,'ordenes'));
+  const snap = await db.collection('ordenes').get();
   const filas = ['\uFEFFEmpleado,Fecha,Platillos,Extras,Cargo empleado,Subsidio empresa,Total,Estado,Tipo,Escaneado'];
   snap.forEach(d => {
     const o = d.data();
@@ -1108,8 +1108,7 @@ async function cargarReporte(){
     ? 'Semana del '+d0.getDate()+' de '+MS_R[d0.getMonth()]+' al '+d1.getDate()+' de '+MS_R[d1.getMonth()]
     : MS_R[d0.getMonth()]+' '+d0.getFullYear();
 
-  const q = query(collection(db,'ordenes'), where('fecha','>=',desde), where('fecha','<=',hasta), orderBy('fecha'));
-  const snap = await getDocs(q);
+  const snap = await db.collection('ordenes').where('fecha','>=',desde).where('fecha','<=',hasta).orderBy('fecha').get();
 
   // Agrupar por empleado
   const porEmp = {};
@@ -1252,8 +1251,8 @@ async function cargarReporte(){
   body.innerHTML = html;
 
   // Listener en tiempo real para órdenes de hoy
-  const qHoy = query(collection(db,'ordenes'), where('fecha','>=',getDias()[0]), where('fecha','<=',hoy()));
-  onSnapshot(qHoy, snapHoy => {
+  const qHoy = db.collection('ordenes').where('fecha','>=',getDias()[0]).where('fecha','<=',hoy());
+  qHoy.onSnapshot(snapHoy => {
     const el = document.getElementById('reporte-ordenes-hoy');
     const sub = document.getElementById('reporte-ordenes-sub');
     if (el) {
