@@ -1096,6 +1096,7 @@ window.exportarCSVCompleto = async function() {
 async function cargarReporte(){
   const body = document.getElementById('reporte-body');
   body.innerHTML = '<div class="loading" style="display:flex"><div class="spinner"></div>&nbsp;Calculando reporte...</div>';
+  try {
 
   const { desde, hasta } = getRango();
   const d0 = new Date(desde+'T12:00:00'), d1 = new Date(hasta+'T12:00:00');
@@ -1262,9 +1263,11 @@ async function cargarReporte(){
       if (sub) sub.textContent = activas === 1 ? '1 comida esta semana' : activas + ' comidas registradas esta semana';
     }
   });
-}
-
-window.exportarCSV = function(){
+  } catch(e) {
+    body.innerHTML = '<div style="padding:2rem;color:#C0392B">Error al cargar reporte: ' + e.message + '</div>';
+    console.error('cargarReporte error:', e);
+  }
+} = function(){
   if(!_reporteRaw.length) return;
   const DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
