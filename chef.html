@@ -178,7 +178,6 @@ html,body{height:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;b
   display:flex;align-items:center;gap:.4rem;
 }
 .orden-card.bloqueada .timer-bar{background:#F5F5F7;color:var(--g2)}
-@keyframes pulseRed{0%,100%{background:#FDE8E8}50%{background:#fbbcbc}}
 
 /* FOOTER CARD */
 .card-foot{padding:.9rem 1.1rem;border-top:1px solid var(--borde2)}
@@ -454,7 +453,7 @@ scanInput.addEventListener('input', () => {
 });
 
 async function procesarScan(code) {
-  document.getElementById('debug-scan').textContent = 'Código: ' + code + ' | Fecha: ' + hoy();
+  document.getElementById('debug-scan').textContent = 'Código: ' + code;
   document.getElementById('debug-scan').style.display = 'block';
 
   // Buscar empleado por código de gafete — API compat directa
@@ -543,11 +542,9 @@ document.getElementById('scan-overlay').addEventListener('click', () => {
 });
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
-let _unsubOrdenes = null;
 function suscribirOrdenes() {
-  if (_unsubOrdenes) { _unsubOrdenes(); _unsubOrdenes = null; }
   const q = db.collection('ordenes').where('fecha', '==', hoy());
-  _unsubOrdenes = q.onSnapshot(snap => {
+  onSnapshot(q, snap => {
     const todasHoy = [];
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
     todasHoy.sort((a,b) => (a.creado_en?.toMillis?.()||0) - (b.creado_en?.toMillis?.()||0));
@@ -625,36 +622,6 @@ function fmtHoraTs(ts) {
   const d = ts?.toDate ? ts.toDate() : new Date(ts);
   return (d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
 }
-function timerOrden(o) {
-  const ts = o.escaneado_en?.toDate ? o.escaneado_en.toDate() : (o.creado_en?.toDate ? o.creado_en.toDate() : new Date());
-  const minPasados = Math.floor((Date.now() - ts) / 60000);
-  const LIMITE = 5;
-  if (minPasados < LIMITE) {
-    const restantes = LIMITE - minPasados;
-    const pct = (minPasados / LIMITE) * 100;
-    return `<div class="timer-bar" style="background:var(--vl);color:var(--v);flex-direction:column;gap:.3rem;padding:.5rem .75rem">
-      <div style="display:flex;align-items:center;gap:.4rem;width:100%">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>Tiempo para preparar: <strong>${restantes} min restante${restantes!==1?'s':''}</strong></span>
-      </div>
-      <div style="width:100%;height:5px;background:rgba(0,0,0,.08);border-radius:3px">
-        <div style="height:5px;background:var(--v);border-radius:3px;transition:width .5s;width:${100-pct}%"></div>
-      </div>
-    </div>`;
-  } else {
-    const extraMin = minPasados - LIMITE;
-    return `<div class="timer-bar" style="background:#FDE8E8;color:#C0392B;flex-direction:column;gap:.3rem;padding:.5rem .75rem;animation:pulseRed 1.5s infinite">
-      <div style="display:flex;align-items:center;gap:.4rem;width:100%">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span><strong>¡Tiempo excedido!</strong> — ${extraMin} min de retraso</span>
-      </div>
-      <div style="width:100%;height:5px;background:rgba(192,57,43,.2);border-radius:3px">
-        <div style="height:5px;background:#C0392B;border-radius:3px;width:100%"></div>
-      </div>
-    </div>`;
-  }
-}
-  const d = ts?.toDate ? ts.toDate() : new Date(ts);
 function fmtEspera(ts) {
   const d = ts?.toDate ? ts.toDate() : new Date(ts);
   const min = Math.floor((Date.now()-d)/60000);
@@ -730,7 +697,7 @@ function render(){
       const urg = cr && cr.includes('Faltan') && parseInt(cr.replace(/[^0-9]/g,'')) < 15;
       timerHTML = '<div class="timer-bar" style="background:'+(urg?'var(--naranjal)':'var(--cl)')+';color:'+(urg?'var(--naranja)':'var(--c)')+'"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lista para las <strong>'+o.hora_preorden+'</strong> &nbsp;·&nbsp; '+cr+'</div>';
     } else {
-      timerHTML = timerOrden(o);
+      timerHTML = '<div class="timer-bar"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Llegó '+fmtEspera(o.creado_en)+'</div>';
     }
 
     // Botón: activa normal + todas las pre-órdenes
@@ -808,7 +775,7 @@ function toast(msg){
   el._t=setTimeout(()=>el.classList.remove('on'),2500);
 }
 
-setInterval(()=>{ render(); }, 30000);
+setInterval(()=>{ if(cola.length) render(); }, 30000);
 // Revisar cada minuto si alguna pre-orden llegó a su hora
 setInterval(()=> { if(cola.length || true) suscribirOrdenes(); }, 60000);
 
