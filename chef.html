@@ -543,9 +543,11 @@ document.getElementById('scan-overlay').addEventListener('click', () => {
 });
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
+let _unsubOrdenes = null;
 function suscribirOrdenes() {
+  if (_unsubOrdenes) { _unsubOrdenes(); _unsubOrdenes = null; }
   const q = db.collection('ordenes').where('fecha', '==', hoy());
-  onSnapshot(q, snap => {
+  _unsubOrdenes = q.onSnapshot(snap => {
     const todasHoy = [];
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
     todasHoy.sort((a,b) => (a.creado_en?.toMillis?.()||0) - (b.creado_en?.toMillis?.()||0));
