@@ -454,7 +454,7 @@ scanInput.addEventListener('input', () => {
 });
 
 async function procesarScan(code) {
-  document.getElementById('debug-scan').textContent = 'Código: ' + code;
+  document.getElementById('debug-scan').textContent = 'Código: ' + code + ' | Fecha: ' + hoy();
   document.getElementById('debug-scan').style.display = 'block';
 
   // Buscar empleado por código de gafete — API compat directa
