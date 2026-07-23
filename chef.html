@@ -544,7 +544,7 @@ document.getElementById('scan-overlay').addEventListener('click', () => {
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
 function suscribirOrdenes() {
   const q = db.collection('ordenes').where('fecha', '==', hoy());
-  onSnapshot(q, snap => {
+  q.onSnapshot(snap => {
     const todasHoy = [];
     snap.forEach(d => todasHoy.push({ id: d.id, ...d.data() }));
     todasHoy.sort((a,b) => (a.creado_en?.toMillis?.()||0) - (b.creado_en?.toMillis?.()||0));
@@ -780,9 +780,9 @@ setInterval(()=>{ if(cola.length) render(); }, 30000);
 setInterval(()=> { if(cola.length || true) suscribirOrdenes(); }, 60000);
 
 // Autenticar anónimamente para acceder a Firestore
-auth.signInAnonymously()
-  .then(() => suscribirOrdenes())
-  .catch(() => suscribirOrdenes());
+// Iniciar órdenes directamente — las reglas permiten auth anónima
+auth.signInAnonymously().finally(() => suscribirOrdenes());
+suscribirOrdenes(); // también iniciar de inmediato sin esperar
 
 
 </script>
