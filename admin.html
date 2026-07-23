@@ -997,10 +997,11 @@ window.borrarMenu=async function(){
 async function cargarOrdenesHoy(){
   document.getElementById('loading-ordenes').style.display='none';
   document.getElementById('ordenes-fecha').textContent='Todas las órdenes activas y futuras';
-  const ayer = new Date(); ayer.setDate(ayer.getDate()-1);
-  const desde = ayer.getFullYear()+'-'+String(ayer.getMonth()+1).padStart(2,'0')+'-'+String(ayer.getDate()).padStart(2,'0');
-  const q = db.collection('ordenes').where('fecha','>=',desde);
-  q.onSnapshot(snap=>{
+  db.collection('ordenes').onSnapshot(snap=>{
+    const hoyStr = hoy();
+    const docs=[];
+    snap.forEach(d=>{ const o=d.data(); if(o.fecha>=hoyStr || o.fecha===hoyStr) docs.push({id:d.id,...o}); });
+    docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
     const docs=[];
     snap.forEach(d=>docs.push({id:d.id,...d.data()}));
     docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
