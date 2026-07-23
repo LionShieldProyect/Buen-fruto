@@ -1108,7 +1108,8 @@ async function cargarReporte(){
     ? 'Semana del '+d0.getDate()+' de '+MS_R[d0.getMonth()]+' al '+d1.getDate()+' de '+MS_R[d1.getMonth()]
     : MS_R[d0.getMonth()]+' '+d0.getFullYear();
 
-  const snap = await db.collection('ordenes').where('fecha','>=',desde).where('fecha','<=',hasta).get();
+  const snapAll = await db.collection('ordenes').get();
+  const snap = { forEach: cb => snapAll.forEach(d => { if(d.data().fecha >= desde && d.data().fecha <= hasta) cb(d); }) };
 
   // Agrupar por empleado
   const porEmp = {};
