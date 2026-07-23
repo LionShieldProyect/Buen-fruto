@@ -233,7 +233,7 @@ input[type=file]{display:none}
     <div class="campo"><label>Correo</label><input type="email" id="inp-email" placeholder="admin@empresa.com" autocomplete="email"/></div>
     <div class="campo"><label>Contraseña</label><input type="password" id="inp-pass" placeholder="••••••••"/></div>
     <button class="btn btn-v" style="width:100%;justify-content:center;padding:.85rem;margin-top:.5rem" id="btn-login">Entrar</button>
-    <div class="msg err" id="login-err" style="margin-top:.75rem">Acceso no autorizado</div>
+    <div class="msg err" id="login-err" style="display:none;margin-top:.75rem">Acceso no autorizado</div>
   </div>
 </div>
 
@@ -487,10 +487,19 @@ let platillosBuf=[], extrasList=[];
 // ── AUTH ──
 onAuthStateChanged(auth, async user=>{
   if(!user){ showLogin(); return; }
-  const snap=await getDoc(doc(db,'empleados',user.uid));
-  if(!snap.exists||snap.data().rol!=='admin'){ await signOut(auth); showLogin(); document.getElementById('login-err').style.display='block'; return; }
-  perfil=snap.data();
-  iniciarAdmin();
+  try {
+    const snap=await db.collection('empleados').doc(user.uid).get();
+    if(!snap.exists||snap.data().rol!=='admin'){
+      await signOut(auth);
+      showLogin();
+      return; // NO mostrar error automáticamente — solo limpiar sesión
+    }
+    perfil=snap.data();
+    iniciarAdmin();
+  } catch(e) {
+    await signOut(auth);
+    showLogin();
+  }
 });
 
 function showLogin(){ document.getElementById('pg-login').style.display='flex'; document.getElementById('pg-admin').style.display='none'; }
