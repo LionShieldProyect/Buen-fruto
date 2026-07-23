@@ -997,7 +997,9 @@ window.borrarMenu=async function(){
 async function cargarOrdenesHoy(){
   document.getElementById('loading-ordenes').style.display='none';
   document.getElementById('ordenes-fecha').textContent='Todas las órdenes activas y futuras';
-  const q = db.collection('ordenes').where('fecha','>=',hoy());
+  const ayer = new Date(); ayer.setDate(ayer.getDate()-1);
+  const desde = ayer.getFullYear()+'-'+String(ayer.getMonth()+1).padStart(2,'0')+'-'+String(ayer.getDate()).padStart(2,'0');
+  const q = db.collection('ordenes').where('fecha','>=',desde);
   q.onSnapshot(snap=>{
     const docs=[];
     snap.forEach(d=>docs.push({id:d.id,...d.data()}));
