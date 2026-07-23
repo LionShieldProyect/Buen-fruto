@@ -997,26 +997,28 @@ window.borrarMenu=async function(){
 async function cargarOrdenesHoy(){
   document.getElementById('loading-ordenes').style.display='none';
   document.getElementById('ordenes-fecha').textContent='Todas las órdenes activas y futuras';
-  db.collection('ordenes').onSnapshot(snap=>{
-    const hoyStr = hoy();
-    const docs=[];
-    snap.forEach(d=>{ const o=d.data(); if(o.fecha>=hoyStr || o.fecha===hoyStr) docs.push({id:d.id,...o}); });
-    docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
-    const docs=[];
-    snap.forEach(d=>docs.push({id:d.id,...d.data()}));
-    docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
-    const tbody=document.getElementById('tabla-ordenes');
-    if(!docs.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes</td></tr>'; return; }
-    tbody.innerHTML='';
-    docs.forEach(o=>{
-      const cancelada = o.estado==='cancelado';
-      const esHoy = o.fecha === hoy();
-      const dt = new Date(o.fecha+'T12:00:00');
-      const fmtDia = DS[dt.getDay()]+' '+dt.getDate()+'/'+MS2_exp[dt.getMonth()];
-      const tr=document.createElement('tr');
-      tr.style.opacity = cancelada ? '.45' : '1';
-      tr.style.background = !esHoy && !cancelada ? 'var(--vl2)' : '';
-      tr.innerHTML=`
+  
+  async function cargar() {
+    try {
+      const snap = await db.collection('ordenes').get();
+      const hoyStr = hoy();
+      const ayerD = new Date(); ayerD.setDate(ayerD.getDate()-1);
+      const ayerStr = ayerD.getFullYear()+'-'+String(ayerD.getMonth()+1).padStart(2,'0')+'-'+String(ayerD.getDate()).padStart(2,'0');
+      const docs=[];
+      snap.forEach(d=>{ const o=d.data(); if(o.fecha>=ayerStr) docs.push({id:d.id,...o}); });
+      docs.sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.creado_en?.toMillis?.()||0)-(b.creado_en?.toMillis?.()||0));
+      const tbody=document.getElementById('tabla-ordenes');
+      if(!docs.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--g3)">Sin órdenes</td></tr>'; return; }
+      tbody.innerHTML='';
+      docs.forEach(o=>{
+        const cancelada = o.estado==='cancelado';
+        const esHoy = o.fecha === hoyStr;
+        const dt = new Date(o.fecha+'T12:00:00');
+        const fmtDia = DS[dt.getDay()]+' '+dt.getDate()+'/'+MS2[dt.getMonth()];
+        const tr=document.createElement('tr');
+        tr.style.opacity = cancelada ? '.45' : '1';
+        tr.style.background = !esHoy && !cancelada ? 'var(--vl2)' : '';
+        tr.innerHTML=`
         <td style="font-size:.75rem;color:var(--g2);white-space:nowrap">${esHoy?'<span class="badge badge-v">Hoy</span>':fmtDia}</td>
         <td style="font-weight:600">${o.empleado_nombre||'—'}</td>
         <td style="font-size:.78rem;max-width:140px">${(o.platillos||[]).join(', ')||'—'}</td>
@@ -1026,12 +1028,16 @@ async function cargarOrdenesHoy(){
         <td>${cancelada?'<span class="badge badge-r">Cancelada</span>':o.estado==='lista'?'<span class="badge badge-v">✓ Lista</span>':o.escaneado?'<span class="badge badge-v">Escaneado</span>':'<span class="badge badge-g">Pendiente</span>'}</td>
         <td style="display:flex;gap:.3rem;flex-wrap:wrap">
           ${cancelada?'':`<button class="btn btn-danger btn-sm" onclick="cancelarOrdenAdmin('${o.id}')">Cancelar</button>`}
-          <button class="btn-elim" onclick="eliminarOrdenAdmin('${o.id}','${(o.empleado_nombre||'').replace(/'/g,"\\'")}','${o.fecha}')">Eliminar</button>
+          <button class="btn-elim" onclick="eliminarOrdenAdmin('${o.id}','${(o.empleado_nombre||'').replace(/'/g,"\'")}','${o.fecha}')">Eliminar</button>
         </td>`;
-      tbody.appendChild(tr);
-    });
-  });
+        tbody.appendChild(tr);
+      });
+    } catch(e) { console.error('Error órdenes:', e); }
+  }
+  cargar();
+  setInterval(cargar, 30000);
 }
+
 
 window.cancelarOrdenAdmin=async function(id){
   if(!confirm('¿Cancelar esta orden? El empleado podrá volver a pedir.'))return;
