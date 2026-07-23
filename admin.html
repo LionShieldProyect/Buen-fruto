@@ -504,15 +504,17 @@ onAuthStateChanged(auth, async user=>{
 
 function showLogin(){ document.getElementById('pg-login').style.display='flex'; document.getElementById('pg-admin').style.display='none'; }
 
+document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('btn-login').addEventListener('click', async()=>{
   const e=document.getElementById('inp-email').value.trim();
   const p=document.getElementById('inp-pass').value;
   const err=document.getElementById('login-err');
-  if(!e||!p){ err.style.display='block'; return; }
+  if(!e||!p){ err.style.display='block'; err.textContent='Ingresa correo y contraseña'; return; }
   err.style.display='none';
   document.getElementById('btn-login').textContent='Entrando...';
-  try{ await signInWithEmailAndPassword(auth,e,p); }
-  catch{ err.style.display='block'; document.getElementById('btn-login').textContent='Entrar'; }
+  try{ await auth.signInWithEmailAndPassword(e,p); }
+  catch(ex){ err.style.display='block'; err.textContent='Correo o contraseña incorrectos'; document.getElementById('btn-login').textContent='Entrar'; }
+});
 });
 
 document.getElementById('btn-salir').addEventListener('click', async()=>{
