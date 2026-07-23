@@ -1009,7 +1009,7 @@ async function cargarOrdenesHoy(){
       const cancelada = o.estado==='cancelado';
       const esHoy = o.fecha === hoy();
       const dt = new Date(o.fecha+'T12:00:00');
-      const fmtDia = DS[dt.getDay()]+' '+dt.getDate()+'/'+MS2[dt.getMonth()];
+      const fmtDia = DS[dt.getDay()]+' '+dt.getDate()+'/'+MS2_exp[dt.getMonth()];
       const tr=document.createElement('tr');
       tr.style.opacity = cancelada ? '.45' : '1';
       tr.style.background = !esHoy && !cancelada ? 'var(--vl2)' : '';
@@ -1278,10 +1278,12 @@ async function cargarReporte(){
     body.innerHTML = '<div style="padding:2rem;color:#C0392B">Error al cargar reporte: ' + e.message + '</div>';
     console.error('cargarReporte error:', e);
   }
-} = function(){
+}
+
+window.exportarCSV = function(){
   if(!_reporteRaw.length) return;
-  const DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  const MS2 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var DS2 = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var MS2_exp = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const lunes = getDias()[0];
   const viernes = getDias()[4];
 
