@@ -532,6 +532,7 @@ function mostrarScanOverlay(tipo, titulo, nombre, detalle, platillos=[], extras=
   overlay._t = setTimeout(() => {
     overlay.classList.remove('on');
     mantenerFoco();
+    render();
   }, tipo === 'ok' ? 4000 : 2500);
 }
 
@@ -539,6 +540,7 @@ function mostrarScanOverlay(tipo, titulo, nombre, detalle, platillos=[], extras=
 document.getElementById('scan-overlay').addEventListener('click', () => {
   document.getElementById('scan-overlay').classList.remove('on');
   mantenerFoco();
+  render();
 });
 
 // ── LISTENER FIRESTORE EN TIEMPO REAL ──
